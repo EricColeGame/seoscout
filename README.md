@@ -71,8 +71,8 @@ seoscout search --keywords keywords.json
 # Step 2 (optional): Review and edit pending_review.json
 # Set "selected": false on items you don't want extracted
 
-# Step 3: Extract content from selected items
-seoscout extract --keywords keywords.json
+# Step 3: Collect content from selected items
+seoscout collect --keywords keywords.json
 ```
 
 Or do it all in one command:
@@ -104,27 +104,27 @@ keywords.json
 │  └─────┬─────┘ └────┬─────┘ │
 │        └──────┬──────┘       │
 │               ▼              │
-│    pending_review.json       │
+│    search_results.json       │
 │    (review & filter)         │
 └─────────────────────────────┘
               │
               ▼
 ┌─────────────────────────────┐
-│  seoscout extract            │
+│  seoscout collect            │
 │  ┌───────────┐ ┌──────────┐ │
 │  │  YouTube   │ │   Web    │ │
 │  │ transcripts│ │  (Jina)  │ │
 │  └─────┬─────┘ └────┬─────┘ │
 │        └──────┬──────┘       │
 │               ▼              │
-│     merged/*.json            │
+│     collected/*.json         │
 │     (per-keyword content)    │
 └─────────────────────────────┘
 ```
 
 ## Output Format
 
-### pending_review.json (Step 1 output)
+### search_results.json (Step 1 output)
 
 ```json
 {
@@ -165,16 +165,16 @@ keywords.json
 }
 ```
 
-Set `"selected": false` on items you don't want, then run `seoscout extract`.
+Set `"selected": false` on items you don't want, then run `seoscout collect`.
 
-### merged/*.json (Step 2 output)
+### collected/*.json (Step 2 output)
 
 One file per keyword (e.g. `my_game_beginner_guide.json`):
 
 ```json
 {
   "keyword": "My Game beginner guide",
-  "merged_at": "2026-06-10T12:05:00",
+  "collected_at": "2026-06-10T12:05:00",
   "sources": {
     "youtube": {
       "count": 1,

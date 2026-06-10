@@ -4,7 +4,7 @@ seoscout CLI — unified entry point.
 
 Usage:
     seoscout search --keywords FILE
-    seoscout extract --project NAME
+    seoscout collect --keywords FILE
     seoscout run --keywords FILE
 """
 
@@ -27,7 +27,6 @@ def _derive_project(keywords_file: str) -> str:
             return topic.replace(' ', '_').lower()
     except Exception:
         pass
-    # Fall back to filename without extension
     base = os.path.splitext(os.path.basename(keywords_file))[0]
     return base.replace(' ', '_').lower()
 
@@ -44,31 +43,31 @@ def main():
     # ── search ──
     search_parser = subparsers.add_parser(
         "search",
-        help="Search keywords on YouTube and Google, output pending_review.json"
+        help="Search keywords on YouTube and Google → search_results.json"
     )
     search_parser.add_argument(
         "--keywords", "-k", required=True,
         help="Path to keywords JSON file"
     )
 
-    # ── extract ──
-    extract_parser = subparsers.add_parser(
-        "extract",
-        help="Extract YouTube transcripts and web content from search results"
+    # ── collect ──
+    collect_parser = subparsers.add_parser(
+        "collect",
+        help="Collect YouTube transcripts and web content from search results"
     )
-    extract_parser.add_argument(
+    collect_parser.add_argument(
         "--project", "-p",
         help="Project name (auto-derived from keywords file if not set)"
     )
-    extract_parser.add_argument(
+    collect_parser.add_argument(
         "--keywords", "-k",
         help="Keywords JSON file (used to derive project name if --project not set)"
     )
 
-    # ── run (search + extract) ──
+    # ── run (search + collect) ──
     run_parser = subparsers.add_parser(
         "run",
-        help="Search and extract in one step"
+        help="Search and collect in one step"
     )
     run_parser.add_argument(
         "--keywords", "-k", required=True,
@@ -85,9 +84,9 @@ def main():
     if args.command in ("search", "run"):
         args.project = _derive_project(args.keywords)
         print(f"📁 Project: {args.project}\n")
-    elif args.command == "extract":
+    elif args.command == "collect":
         if args.project:
-            pass  # manual override
+            pass
         elif args.keywords:
             args.project = _derive_project(args.keywords)
         else:
@@ -96,28 +95,28 @@ def main():
 
     if args.command == "search":
         asyncio.run(_run_search(args))
-    elif args.command == "extract":
-        asyncio.run(_run_extract(args))
+    elif args.command == "collect":
+        asyncio.run(_run_collect(args))
     elif args.command == "run":
         asyncio.run(_run_all(args))
 
 
 async def _run_search(args):
+    from .search import run_search
+    await run_search(args.project, args.keywords)
+
+
+async def _run_collect(args):
     from .collect import run_collect
-    await run_collect(args.project, args.keywords)
-
-
-async def _run_extract(args):
-    from .extract import run_extract
-    await run_extract(args.project)
+    await run_collect(args.project)
 
 
 async def _run_all(args):
+    from .search import run_search
     from .collect import run_collect
-    from .extract import run_extract
 
-    await run_collect(args.project, args.keywords)
-    await run_extract(args.project)
+    await run_search(args.project, args.keywords)
+    await run_collect(args.project)
 
 
 if __name__ == "__main__":
