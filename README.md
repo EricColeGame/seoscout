@@ -45,27 +45,17 @@ cp .env.example .env
 
 ### Prepare your keywords file
 
-Create a JSON file with your keywords grouped by category:
+Create a JSON file with your keywords:
 
 ```json
 {
   "topic_name": "My Game",
-  "categories": [
-    {
-      "category": "guide",
-      "keywords": [
-        "My Game beginner guide",
-        "My Game best characters tier list",
-        "My Game tips and tricks"
-      ]
-    },
-    {
-      "category": "gameplay",
-      "keywords": [
-        "My Game walkthrough",
-        "My Game how to level up fast"
-      ]
-    }
+  "keywords": [
+    "My Game beginner guide",
+    "My Game best characters tier list",
+    "My Game tips and tricks",
+    "My Game walkthrough",
+    "My Game how to level up fast"
   ]
 }
 ```

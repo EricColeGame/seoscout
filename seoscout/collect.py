@@ -163,7 +163,7 @@ async def search_with_retry(
     return results
 
 
-async def run_collect(project: str, keywords_file: str, category: str = None):
+async def run_collect(project: str, keywords_file: str):
     """Run the collect step programmatically."""
     Config.init(project)
 
@@ -176,11 +176,7 @@ async def run_collect(project: str, keywords_file: str, category: str = None):
 
     Config.print_summary()
 
-    keywords = load_keywords_from_json(
-        keywords_file,
-        category=category,
-        ignored_categories=Config.IGNORED_CATEGORIES
-    )
+    keywords = load_keywords_from_json(keywords_file)
 
     if not keywords:
         print("❌ No keywords found")
@@ -198,8 +194,6 @@ async def run_collect(project: str, keywords_file: str, category: str = None):
         pass
 
     print(f"📋 Keywords: {len(keywords)}")
-    if category:
-        print(f"📁 Category: {category}")
 
     existing_results = load_existing_results()
     youtube_retry, web_retry = filter_keywords_for_retry(keywords, existing_results)
@@ -269,10 +263,9 @@ async def main():
                         help="Project name for data isolation")
     parser.add_argument("--keywords", "--json", required=True,
                         help="Path to keywords JSON file")
-    parser.add_argument("--category", help="Filter by category (optional)")
     args = parser.parse_args()
 
-    await run_collect(args.project, args.keywords, args.category)
+    await run_collect(args.project, args.keywords)
 
 
 if __name__ == "__main__":

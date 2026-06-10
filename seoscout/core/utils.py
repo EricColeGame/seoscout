@@ -81,34 +81,26 @@ def is_blocked_domain(url: str, blocked_domains: set) -> bool:
     return any(blocked in domain for blocked in blocked_domains)
 
 
-def load_keywords_from_json(json_file: str, category: str = None, ignored_categories: List[str] = None) -> List[str]:
+def load_keywords_from_json(json_file: str) -> List[str]:
     """
-    从 JSON 文件加载关键词
+    Load keywords from a JSON file.
 
-    Args:
-        json_file: JSON 文件路径
-        category: 筛选的分类（可选）
-        ignored_categories: 忽略的分类列表（可选）
+    Supports two formats:
+    1. Flat list:  {"topic_name": "...", "keywords": ["kw1", "kw2"]}
+    2. Legacy categories: {"categories": [{"category": "...", "keywords": [...]}]}
 
     Returns:
-        关键词列表
+        List of keyword strings
     """
     data = load_json(json_file)
+
+    # Flat keyword list (preferred)
+    if "keywords" in data and isinstance(data["keywords"], list):
+        return [kw for kw in data["keywords"] if isinstance(kw, str) and kw.strip()]
+
+    # Legacy categories format (backward compatible)
     keywords = []
-
-    ignored_categories = ignored_categories or []
-
     for cat in data.get("categories", []):
-        cat_name = cat.get("category", "")
-
-        # 跳过忽略的分类
-        if cat_name in ignored_categories:
-            continue
-
-        # 如果指定了分类，只处理该分类
-        if category and cat_name != category:
-            continue
-
         keywords.extend(cat.get("keywords", []))
 
     return keywords

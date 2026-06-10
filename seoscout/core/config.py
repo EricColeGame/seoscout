@@ -76,7 +76,6 @@ class Config:
     SEARCH_MAX_RETRIES = 3
     SEARCH_RETRY_DELAY = 2
 
-    IGNORED_CATEGORIES = []
     BLOCKED_DOMAINS = {"youtube.com", "youtu.be", "reddit.com", "discord.com"}
 
     _initialized = False
@@ -151,12 +150,6 @@ class Config:
         # General
         cls.SEARCH_MAX_RETRIES = int(os.getenv("SEARCH_MAX_RETRIES", "3"))
         cls.SEARCH_RETRY_DELAY = int(os.getenv("SEARCH_RETRY_DELAY", "2"))
-
-        cls.IGNORED_CATEGORIES = [
-            cat.strip()
-            for cat in os.getenv("IGNORED_CATEGORIES", "").split(",")
-            if cat.strip()
-        ]
 
         cls.BLOCKED_DOMAINS = set(
             d.strip()
@@ -244,7 +237,6 @@ class Config:
         print(f"  - Jina RPM:        {cls.JINA_RPM}")
         print(f"  - Jina concurrency:{cls.JINA_CONCURRENCY}")
         print(f"\nGeneral:")
-        print(f"  - Ignored cats:    {', '.join(cls.IGNORED_CATEGORIES) or '(none)'}")
         print(f"  - Blocked domains: {len(cls.BLOCKED_DOMAINS)}")
         print(f"  - Use proxy:       {'yes' if cls.USE_PROXY else 'no'}")
         print(f"  - Search retries:  {cls.SEARCH_MAX_RETRIES}")

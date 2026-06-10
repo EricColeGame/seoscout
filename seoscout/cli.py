@@ -3,9 +3,9 @@
 seoscout CLI — unified entry point.
 
 Usage:
-    seoscout search --keywords FILE --project NAME [--category CAT]
+    seoscout search --keywords FILE --project NAME
     seoscout extract --project NAME
-    seoscout run --keywords FILE --project NAME [--category CAT]
+    seoscout run --keywords FILE --project NAME
 """
 
 import asyncio
@@ -37,10 +37,6 @@ def main():
         "--project", "-p", required=True,
         help="Project name (data stored in output/<project>/)"
     )
-    search_parser.add_argument(
-        "--category", "-c", default=None,
-        help="Only search keywords in this category"
-    )
 
     # ── extract ──
     extract_parser = subparsers.add_parser(
@@ -65,10 +61,6 @@ def main():
         "--project", "-p", required=True,
         help="Project name"
     )
-    run_parser.add_argument(
-        "--category", "-c", default=None,
-        help="Only process keywords in this category"
-    )
 
     args = parser.parse_args()
 
@@ -86,10 +78,8 @@ def main():
 
 async def _run_search(args):
     """Delegate to collect.py logic."""
-    # Import here to avoid circular imports and to allow
-    # the package to be used as a library too.
     from .collect import run_collect
-    await run_collect(args.project, args.keywords, args.category)
+    await run_collect(args.project, args.keywords)
 
 
 async def _run_extract(args):
@@ -103,7 +93,7 @@ async def _run_all(args):
     from .collect import run_collect
     from .extract import run_extract
 
-    await run_collect(args.project, args.keywords, args.category)
+    await run_collect(args.project, args.keywords)
     await run_extract(args.project)
 
 
