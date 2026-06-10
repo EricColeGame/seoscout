@@ -13,11 +13,11 @@ import re
 from datetime import datetime
 from collections import defaultdict
 
-from core.config import Config
-from core.youtube import YouTube
-from core.web import Web
-from core.models import YouTubeItem, WebItem
-from core.utils import load_json, save_json, ensure_dir
+from .core.config import Config
+from .core.youtube import YouTube
+from .core.web import Web
+from .core.models import YouTubeItem, WebItem
+from .core.utils import load_json, save_json, ensure_dir
 
 
 def keyword_to_filename(keyword: str) -> str:

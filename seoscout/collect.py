@@ -22,10 +22,10 @@ if sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 
-from core.config import Config
-from core.youtube import YouTube
-from core.web import Web
-from core.utils import load_keywords_from_json, save_json, ensure_dir
+from .core.config import Config
+from .core.youtube import YouTube
+from .core.web import Web
+from .core.utils import load_keywords_from_json, save_json, ensure_dir
 
 
 def load_existing_results() -> Dict[str, Dict]:
