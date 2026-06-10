@@ -66,25 +66,27 @@ Create a JSON file with your keywords:
 
 ```bash
 # Step 1: Search keywords → output/pending_review.json
-seoscout search --keywords keywords.json --project mysite
+seoscout search --keywords keywords.json
 
 # Step 2 (optional): Review and edit pending_review.json
 # Set "selected": false on items you don't want extracted
 
 # Step 3: Extract content from selected items
-seoscout extract --project mysite
+seoscout extract --keywords keywords.json
 ```
 
 Or do it all in one command:
 
 ```bash
-seoscout run --keywords keywords.json --project mysite
+seoscout run --keywords keywords.json
 ```
+
+The project name is auto-derived from `topic_name` in your keywords file (lowercased, spaces replaced with `_`). If no `topic_name` is set, the filename is used instead.
 
 You can also use it as a Python module:
 
 ```bash
-python -m seoscout run --keywords keywords.json --project mysite
+python -m seoscout run --keywords keywords.json
 ```
 
 ## How It Works
@@ -94,7 +96,8 @@ keywords.json
      │
      ▼
 ┌─────────────────────────────┐
-│  seoscout search             │
+│  seoscout search             │  ← auto project name from topic_name
+│  ┌───────────┐ ┌──────────┐ │
 │  ┌───────────┐ ┌──────────┐ │
 │  │  YouTube   │ │  Google  │ │
 │  │  (yt-dlp)  │ │ (Serper) │ │
