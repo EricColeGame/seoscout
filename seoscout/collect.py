@@ -76,10 +76,15 @@ async def run_collect(project: str):
 
     for kw_data in data["keywords"]:
         keyword = kw_data["keyword"]
+        category = kw_data.get("category", "")
 
-        # Skip keywords that already have collected files
+        # Build collected path with optional category subdirectory
         keyword_file = keyword_to_filename(keyword)
-        collected_path = f"{collected_dir}/{keyword_file}.json"
+        if category:
+            category_slug = category.lower().replace(' ', '-')
+            collected_path = f"{collected_dir}/{category_slug}/{keyword_file}.json"
+        else:
+            collected_path = f"{collected_dir}/{keyword_file}.json"
         if os.path.exists(collected_path):
             skipped_count += 1
             continue
@@ -176,16 +181,22 @@ async def run_collect(project: str):
     total_saved = 0
     for kw_data in data["keywords"]:
         keyword = kw_data["keyword"]
+        category = kw_data.get("category", "")
         keyword_result = results.get(keyword, {"youtube": [], "web": []})
 
         if not keyword_result["youtube"] and not keyword_result["web"]:
             continue
 
         keyword_file = keyword_to_filename(keyword)
-        output_file = f"{collected_dir}/{keyword_file}.json"
+        if category:
+            category_slug = category.lower().replace(' ', '-')
+            output_file = f"{collected_dir}/{category_slug}/{keyword_file}.json"
+        else:
+            output_file = f"{collected_dir}/{keyword_file}.json"
 
         output = {
             "keyword": keyword,
+            "category": category,
             "collected_at": datetime.now().isoformat(),
             "sources": {
                 "youtube": {

@@ -51,20 +51,45 @@ cp .env.example .env
 
 Create a JSON file with your keywords:
 
+**Categorized format** (articles organized into category directories):
+
+```json
+{
+  "topic_name": "My Game",
+  "categories": [
+    {
+      "category": "Guide",
+      "keywords": [
+        "My Game beginner guide",
+        "My Game walkthrough",
+        "My Game how to level up fast"
+      ]
+    },
+    {
+      "category": "Tier List",
+      "keywords": [
+        "My Game best characters tier list",
+        "My Game best weapons"
+      ]
+    }
+  ]
+}
+```
+
+**Flat format** (all articles in one directory):
+
 ```json
 {
   "topic_name": "My Game",
   "keywords": [
     "My Game beginner guide",
     "My Game best characters tier list",
-    "My Game tips and tricks",
-    "My Game walkthrough",
-    "My Game how to level up fast"
+    "My Game tips and tricks"
   ]
 }
 ```
 
-> `topic_name` is optional. When set, search results that don't mention the topic in their title or snippet are automatically filtered out.
+> `topic_name` is optional. When set, search results that don't mention the topic in their title or snippet are automatically filtered out. The categorized format organizes output into subdirectories: `articles/en/guide/`, `articles/en/tier-list/`, etc.
 
 ### Run
 

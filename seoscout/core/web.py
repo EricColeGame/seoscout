@@ -134,34 +134,8 @@ class Web:
                     if not is_blocked_domain(r.get('link', ''), self.config.BLOCKED_DOMAINS)
                 ]
 
-                # 按主题名过滤
-                if topic_name:
-                    topic_lower = topic_name.lower()
-                    # 同时检查有空格和无空格的版本（如 "all firing" 和 "allfiring"）
-                    topic_nospace = topic_lower.replace(' ', '')
-                    before_count = len(filtered)
-                    kept = []
-                    filtered_out = []
-                    for r in filtered:
-                        title = r.get('title', '')
-                        snippet = r.get('snippet', '')
-                        title_lower = title.lower()
-                        snippet_lower = snippet.lower()
-                        if (topic_lower in title_lower or topic_nospace in title_lower or
-                            topic_lower in snippet_lower or topic_nospace in snippet_lower):
-                            kept.append(r)
-                        else:
-                            filtered_out.append(r)
-                            print(f"    🗑️ Web过滤: \"{title[:60]}\" (不含 \"{topic_name}\")")
-                    if kept:
-                        filtered = kept
-                        # 记录被过滤掉的条目
-                        if filtered_out:
-                            self._log_filtered(topic_name, filtered_out, source="web")
-                    # 如果全部被过滤，不保留（避免不相关数据进入）
-                    elif before_count > 0:
-                        print(f"    ⚠️ 所有Web结果均不含 \"{topic_name}\"，无相关结果")
-                        filtered = []
+                # Web results are NOT filtered by topic_name
+                # (only YouTube results are topic-filtered)
 
                 # 转换为 WebItem
                 items = []

@@ -121,14 +121,14 @@ async def run_translate(
     prompt_template_str = load_prompt_template(prompt_path)
     prompt_template = Template(prompt_template_str)
 
-    # Find English articles
+    # Find English articles (flat + category subdirs)
     en_dir = Path(Config.DATA_DIR) / "articles" / "en"
     if not en_dir.exists():
         print(f"  ❌ No English articles found at {en_dir}")
         print("     Run `seoscout generate` first")
         return
 
-    articles = sorted(en_dir.glob("*.md"))
+    articles = sorted(en_dir.glob("**/*.md"))
     if not articles:
         print("  ❌ No .md files in articles/en/")
         return
@@ -149,9 +149,11 @@ async def run_translate(
             continue
 
         article_name = article_path.stem
+        # Preserve category subdirectory structure
+        relative = article_path.relative_to(en_dir)
 
         for lang_code in target_langs:
-            output_path = Path(Config.DATA_DIR) / "articles" / lang_code / article_path.name
+            output_path = Path(Config.DATA_DIR) / "articles" / lang_code / relative
 
             if output_path.exists() and not overwrite:
                 continue

@@ -81,29 +81,38 @@ def is_blocked_domain(url: str, blocked_domains: set) -> bool:
     return any(blocked in domain for blocked in blocked_domains)
 
 
-def load_keywords_from_json(json_file: str) -> List[str]:
+def load_keywords_from_json(json_file: str) -> List[Dict]:
     """
     Load keywords from a JSON file.
 
     Supports two formats:
-    1. Flat list:  {"topic_name": "...", "keywords": ["kw1", "kw2"]}
-    2. Legacy categories: {"categories": [{"category": "...", "keywords": [...]}]}
+    1. Categorized: {"categories": [{"category": "Guide", "keywords": ["kw1", "kw2"]}, ...]}
+    2. Flat list:   {"topic_name": "...", "keywords": ["kw1", "kw2"]}
 
     Returns:
-        List of keyword strings
+        List of dicts: [{"keyword": "kw1", "category": "Guide"}, ...]
+        For flat format, category is "".
     """
     data = load_json(json_file)
+    results = []
 
-    # Flat keyword list (preferred)
+    # Categorized format (preferred)
+    if "categories" in data and isinstance(data["categories"], list):
+        for cat in data["categories"]:
+            category = cat.get("category", "")
+            for kw in cat.get("keywords", []):
+                if isinstance(kw, str) and kw.strip():
+                    results.append({"keyword": kw.strip(), "category": category})
+        if results:
+            return results
+
+    # Flat keyword list
     if "keywords" in data and isinstance(data["keywords"], list):
-        return [kw for kw in data["keywords"] if isinstance(kw, str) and kw.strip()]
+        for kw in data["keywords"]:
+            if isinstance(kw, str) and kw.strip():
+                results.append({"keyword": kw.strip(), "category": ""})
 
-    # Legacy categories format (backward compatible)
-    keywords = []
-    for cat in data.get("categories", []):
-        keywords.extend(cat.get("keywords", []))
-
-    return keywords
+    return results
 
 
 class ProgressBar:

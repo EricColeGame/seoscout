@@ -93,22 +93,42 @@ async def run_generate(
     prompt_template = load_prompt_template(prompt_path)
     print(f"  📝 Prompt template loaded ({len(prompt_template)} chars)\n")
 
-    # Load keywords
+    # Load keywords with categories from search_results.json
+    search_results_path = f"{Config.OUT_DIR}/search_results.json"
     try:
-        with open(keywords_file, 'r', encoding='utf-8') as f:
-            kw_data = json.load(f)
+        with open(search_results_path, 'r', encoding='utf-8') as f:
+            sr_data = json.load(f)
+        keyword_entries = []
+        for kw in sr_data.get('keywords', []):
+            keyword_entries.append({
+                'keyword': kw['keyword'],
+                'category': kw.get('category', ''),
+            })
     except FileNotFoundError:
-        print(f"  ❌ Keywords file not found: {keywords_file}")
-        return
+        # Fallback: load from keywords file directly
+        try:
+            with open(keywords_file, 'r', encoding='utf-8') as f:
+                kw_data = json.load(f)
+        except FileNotFoundError:
+            print(f"  ❌ Keywords file not found: {keywords_file}")
+            return
 
-    keywords = [k.strip() for k in kw_data.get('keywords', []) if k.strip()]
-    if not keywords:
-        print("  ❌ No keywords found in file")
+        keyword_entries = []
+        if 'categories' in kw_data:
+            for cat in kw_data['categories']:
+                for kw in cat.get('keywords', []):
+                    keyword_entries.append({'keyword': kw.strip(), 'category': cat.get('category', '')})
+        else:
+            for kw in kw_data.get('keywords', []):
+                keyword_entries.append({'keyword': kw.strip(), 'category': ''})
+
+    if not keyword_entries:
+        print("  ❌ No keywords found")
         return
 
     if test:
-        keywords = keywords[:2]
-        print(f"  🧪 TEST MODE: {len(keywords)} keywords\n")
+        keyword_entries = keyword_entries[:2]
+        print(f"  🧪 TEST MODE: {len(keyword_entries)} keywords\n")
 
     # Load collected material for each keyword
     collected_dir = f"{Config.OUT_DIR}/collected"
@@ -119,16 +139,27 @@ async def run_generate(
     skipped_no_data = 0
     skipped_exists = 0
 
-    for keyword in keywords:
+    for entry in keyword_entries:
+        keyword = entry['keyword']
+        category = entry.get('category', '')
         slug = keyword_to_slug(keyword)
         fname = keyword_to_filename(keyword)
-        collected_path = f"{collected_dir}/{fname}.json"
+
+        # Look for collected file in category subdir or flat
+        if category:
+            cat_slug = category.lower().replace(' ', '-')
+            collected_path = f"{collected_dir}/{cat_slug}/{fname}.json"
+            if not os.path.exists(collected_path):
+                collected_path = f"{collected_dir}/{fname}.json"
+            output_path = f"{articles_dir}/{cat_slug}/{slug}.md"
+        else:
+            collected_path = f"{collected_dir}/{fname}.json"
+            output_path = f"{articles_dir}/{slug}.md"
 
         if not os.path.exists(collected_path):
             skipped_no_data += 1
             continue
 
-        output_path = f"{articles_dir}/{slug}.md"
         if os.path.exists(output_path) and not overwrite:
             skipped_exists += 1
             continue

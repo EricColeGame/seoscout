@@ -42,6 +42,7 @@ def load_existing_results() -> Dict[str, Dict]:
         for kw_data in data.get('keywords', []):
             keyword = kw_data['keyword']
             existing[keyword] = {
+                'category': kw_data.get('category', ''),
                 'youtube': kw_data.get('youtube', {'count': 0, 'items': []}),
                 'web': kw_data.get('web', {'count': 0, 'items': []})
             }
@@ -53,13 +54,14 @@ def load_existing_results() -> Dict[str, Dict]:
 
 
 def filter_keywords_for_retry(
-    all_keywords: List[str],
+    all_keywords: List[Dict],
     existing_results: Dict[str, Dict]
 ) -> Tuple[List[str], List[str]]:
     youtube_retry = []
     web_retry = []
 
-    for keyword in all_keywords:
+    for kw_dict in all_keywords:
+        keyword = kw_dict['keyword']
         existing = existing_results.get(keyword, {})
 
         youtube_data = existing.get('youtube', {})
@@ -74,15 +76,22 @@ def filter_keywords_for_retry(
 
 
 def merge_results(
-    all_keywords: List[str],
+    all_keywords: List[Dict],
     existing_results: Dict[str, Dict],
     youtube_new: Dict[str, List],
     web_new: Dict[str, List]
 ) -> List[Dict]:
     merged = []
 
-    for keyword in all_keywords:
+    for kw_dict in all_keywords:
+        keyword = kw_dict['keyword']
+        category = kw_dict.get('category', '')
+
         existing = existing_results.get(keyword, {})
+        # Preserve category from existing or from input
+        if not category:
+            category = existing.get('category', '')
+
         existing_youtube = existing.get('youtube', {'count': 0, 'items': []})
         existing_web = existing.get('web', {'count': 0, 'items': []})
 
@@ -101,6 +110,7 @@ def merge_results(
 
         merged.append({
             'keyword': keyword,
+            'category': category,
             'youtube': final_youtube,
             'web': final_web
         })
@@ -182,6 +192,10 @@ async def run_search(project: str, keywords_file: str):
         print("❌ No keywords found")
         return
 
+    # Extract keyword strings and detect categories
+    keyword_strings = [kw['keyword'] for kw in keywords]
+    categories = set(kw['category'] for kw in keywords if kw['category'])
+
     # Read topic_name
     topic_name = ''
     try:
@@ -194,16 +208,18 @@ async def run_search(project: str, keywords_file: str):
         pass
 
     print(f"📋 Keywords: {len(keywords)}")
+    if categories:
+        print(f"📂 Categories: {', '.join(sorted(categories))}")
 
     existing_results = load_existing_results()
     youtube_retry, web_retry = filter_keywords_for_retry(keywords, existing_results)
 
     print(f"\n📊 Retry stats:")
-    print(f"  - Total:          {len(keywords)}")
+    print(f"  - Total:          {len(keyword_strings)}")
     print(f"  - YouTube retry:  {len(youtube_retry)}")
     print(f"  - Web retry:      {len(web_retry)}")
-    print(f"  - YouTube cached: {len(keywords) - len(youtube_retry)}")
-    print(f"  - Web cached:     {len(keywords) - len(web_retry)}")
+    print(f"  - YouTube cached: {len(keyword_strings) - len(youtube_retry)}")
+    print(f"  - Web cached:     {len(keyword_strings) - len(web_retry)}")
 
     yt = YouTube()
     web = Web()
