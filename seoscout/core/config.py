@@ -120,7 +120,7 @@ class Config:
         cls.TUNNEL_PASS = os.getenv("TUNNEL_PASS", "")
         cls.USE_PROXY = os.getenv("USE_PROXY", "false").lower() == "true"
 
-        cls.TUNNEL_PROXY_FORMAT = os.getenv("TUNNEL_PROXY_FORMAT", "standard").lower()
+        cls.TUNNEL_PROXY_FORMAT = os.getenv("TUNNEL_PROXY_FORMAT", "tagged").lower()
         cls.TUNNEL_CHANNEL_PREFIX = os.getenv("TUNNEL_CHANNEL_PREFIX", "channel")
         cls.TUNNEL_TTL = int(os.getenv("TUNNEL_TTL", "60"))
 
