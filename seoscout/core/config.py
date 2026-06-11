@@ -39,7 +39,7 @@ class Config:
     TUNNEL_PASS = ""
     USE_PROXY = False
 
-    TUNNEL_PROXY_FORMAT = "standard"
+    TUNNEL_PROXY_FORMAT = "tagged"
     TUNNEL_CHANNEL_PREFIX = "channel"
     TUNNEL_TTL = 60
 

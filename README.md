@@ -205,27 +205,76 @@ One file per keyword (e.g. `my_game_beginner_guide.json`):
 
 ## Configuration Reference
 
-All settings go in `.env` (copy from `.env.example`).
+All settings go in `.env` (copy from `.env.example` and fill in your keys):
 
-### Required
+```bash
+cp .env.example .env
+```
 
-| Variable | Description |
-|----------|-------------|
-| `SERPER_API_KEY` | Your [Serper.dev](https://serper.dev/) API key for Google search |
+### 🔑 Required — API Keys
 
-### Recommended
+You need at least one API key to use seoscout:
 
-| Variable | Description |
-|----------|-------------|
-| `JINA_API_KEY` | Your [Jina AI](https://jina.ai/) API key for web page extraction (higher rate limits) |
+```bash
+# Google search via Serper — REQUIRED
+# Get your free key at https://serper.dev/
+SERPER_API_KEY=your_serper_api_key_here
 
-### Output
+# Web page content extraction via Jina — RECOMMENDED
+# Without this, you get lower rate limits
+# Get your free key at https://jina.ai/
+JINA_API_KEY=your_jina_api_key_here
+```
+
+| Variable | Required | Where to get |
+|----------|:--------:|--------------|
+| `SERPER_API_KEY` | ✅ Yes | [serper.dev](https://serper.dev/) (free tier available) |
+| `JINA_API_KEY` | Recommended | [jina.ai](https://jina.ai/) (free tier available) |
+
+### 🌐 Proxy — For YouTube Transcript Extraction
+
+YouTube blocks IPs that request too many transcripts. If you see `RequestBlocked` errors, enable a proxy.
+
+**With rotating proxy (e.g. 青果网络 / Qingguo):**
+
+```bash
+USE_PROXY=true
+TUNNEL_HOST=overseas.tunnel.qg.net
+TUNNEL_PORT=16660
+TUNNEL_USER=your_username
+TUNNEL_PASS=your_password
+TUNNEL_PROXY_FORMAT=tagged
+TUNNEL_CHANNEL_PREFIX=channel
+TUNNEL_TTL=60
+```
+
+**With standard HTTP proxy:**
+
+```bash
+USE_PROXY=true
+TUNNEL_HOST=proxy.example.com
+TUNNEL_PORT=8080
+TUNNEL_USER=your_username
+TUNNEL_PASS=your_password
+TUNNEL_PROXY_FORMAT=standard
+```
+
+**Control proxy per stage** (optional):
+
+```bash
+# Only use proxy for YouTube transcript extraction, not for search
+USE_PROXY=false
+USE_PROXY_FOR_SEARCH=false
+USE_PROXY_FOR_EXTRACT=true
+```
+
+### 📁 Output
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `OUTPUT_DIR` | `./output` | Root directory for all project data |
 
-### YouTube Tuning
+### 🎬 YouTube Tuning
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -236,7 +285,7 @@ All settings go in `.env` (copy from `.env.example`).
 | `YOUTUBE_SEARCH_WORKERS` | `10` | Parallel search workers |
 | `YOUTUBE_TRANSCRIPT_WORKERS` | `15` | Parallel transcript workers |
 
-### Web Tuning
+### 🌍 Web Tuning
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -247,18 +296,7 @@ All settings go in `.env` (copy from `.env.example`).
 | `JINA_CONCURRENCY` | `20` | Jina parallel requests |
 | `WEB_EXTRACT_RETRIES` | `3` | Retries for web extraction |
 
-### Proxy (optional)
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `USE_PROXY` | `false` | Enable proxy |
-| `TUNNEL_HOST` | _(empty)_ | Proxy host |
-| `TUNNEL_PORT` | `18866` | Proxy port |
-| `TUNNEL_USER` | _(empty)_ | Proxy username |
-| `TUNNEL_PASS` | _(empty)_ | Proxy password |
-| `TUNNEL_PROXY_FORMAT` | `standard` | `standard` or `tagged` (rotating proxy) |
-
-### General
+### ⚙️ General
 
 | Variable | Default | Description |
 |----------|---------|-------------|
