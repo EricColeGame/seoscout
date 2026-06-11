@@ -71,6 +71,30 @@ class Config:
     JINA_CONCURRENCY = 20
 
     # ============================================================
+    # LLM API (generate + translate)
+    # ============================================================
+    LLM_API_KEY = ""
+    LLM_API_BASE_URL = "https://api.apifast.tech/v1"
+    LLM_MODEL = "gemini-2.5-flash"
+    LLM_TEMPERATURE = 0.7
+    LLM_MAX_TOKENS = 24576
+    LLM_TIMEOUT = 300
+    LLM_RETRY_ATTEMPTS = 2
+    LLM_RETRY_DELAY = 5
+
+    # ============================================================
+    # Generate concurrency
+    # ============================================================
+    GENERATE_BATCH_SIZE = 100
+    GENERATE_CONCURRENT_LIMIT = 10
+
+    # ============================================================
+    # Translate concurrency
+    # ============================================================
+    TRANSLATE_BATCH_SIZE = 10
+    TRANSLATE_BATCH_DELAY = 1
+
+    # ============================================================
     # General
     # ============================================================
     SEARCH_MAX_RETRIES = 3
@@ -150,6 +174,24 @@ class Config:
         # General
         cls.SEARCH_MAX_RETRIES = int(os.getenv("SEARCH_MAX_RETRIES", "3"))
         cls.SEARCH_RETRY_DELAY = int(os.getenv("SEARCH_RETRY_DELAY", "2"))
+
+        # LLM API (generate + translate)
+        cls.LLM_API_KEY = os.getenv("LLM_API_KEY", "")
+        cls.LLM_API_BASE_URL = os.getenv("LLM_API_BASE_URL", "https://api.apifast.tech/v1")
+        cls.LLM_MODEL = os.getenv("LLM_MODEL", "gemini-2.5-flash")
+        cls.LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.7"))
+        cls.LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "24576"))
+        cls.LLM_TIMEOUT = int(os.getenv("LLM_TIMEOUT", "300"))
+        cls.LLM_RETRY_ATTEMPTS = int(os.getenv("LLM_RETRY_ATTEMPTS", "2"))
+        cls.LLM_RETRY_DELAY = int(os.getenv("LLM_RETRY_DELAY", "5"))
+
+        # Generate concurrency
+        cls.GENERATE_BATCH_SIZE = int(os.getenv("GENERATE_BATCH_SIZE", "100"))
+        cls.GENERATE_CONCURRENT_LIMIT = int(os.getenv("GENERATE_CONCURRENT_LIMIT", "10"))
+
+        # Translate concurrency
+        cls.TRANSLATE_BATCH_SIZE = int(os.getenv("TRANSLATE_BATCH_SIZE", "10"))
+        cls.TRANSLATE_BATCH_DELAY = int(os.getenv("TRANSLATE_BATCH_DELAY", "1"))
 
         cls.BLOCKED_DOMAINS = set(
             d.strip()
@@ -240,4 +282,10 @@ class Config:
         print(f"  - Blocked domains: {len(cls.BLOCKED_DOMAINS)}")
         print(f"  - Use proxy:       {'yes' if cls.USE_PROXY else 'no'}")
         print(f"  - Search retries:  {cls.SEARCH_MAX_RETRIES}")
+        print(f"\nLLM:")
+        print(f"  - Model:           {cls.LLM_MODEL}")
+        print(f"  - API base:        {cls.LLM_API_BASE_URL}")
+        print(f"  - Max tokens:      {cls.LLM_MAX_TOKENS}")
+        print(f"  - Gen batch size:  {cls.GENERATE_BATCH_SIZE}")
+        print(f"  - Xlate batch:     {cls.TRANSLATE_BATCH_SIZE}")
         print("=" * 70 + "\n")

@@ -1,23 +1,26 @@
 # seoscout
 
-> **From keywords to structured content — in one command.**
+> **From keywords to multilingual articles — in one command.**
 
 seoscout is a CLI tool for SEO professionals and content creators. Feed it a list of keywords, and it will:
 
 - 🔍 **Search** YouTube (via yt-dlp) and Google (via Serper API) in parallel
-- 📥 **Extract** YouTube video transcripts and full web page text (via Jina Reader)
-- 📦 **Output** per-keyword JSON files you can use for article writing, competitive analysis, or content gap research
+- 📥 **Collect** YouTube video transcripts and full web page text (via Jina Reader)
+- ✍️ **Generate** SEO-optimized Markdown articles using LLM
+- 🌍 **Translate** articles into 17 languages
 
-No more manually opening every search result and copy-pasting.
+No more manually opening every search result, copy-pasting, or paying for expensive content tools.
 
 ## Features
 
+- **Full pipeline** — keywords → search → collect → generate → translate
 - **Parallel search** — YouTube + Google at the same time
+- **LLM-powered writing** — generate SEO articles from collected material
+- **17 languages** — translate articles to Spanish, Japanese, Arabic, and more
 - **Smart filtering** — filter by duration, topic relevance, and block competitor/spam domains
 - **Caching** — each source is only extracted once; re-runs skip cached content
 - **Proxy support** — rotating proxy for YouTube transcript extraction when IP-blocked
-- **Content cleaning** — strips navigation, ads, breadcrumbs, and footer junk from web pages
-- **Configurable** — control concurrency, rate limits, results per keyword via `.env`
+- **Configurable** — control concurrency, batch size, LLM model via `.env`
 
 ## Quick Start
 
@@ -25,8 +28,9 @@ No more manually opening every search result and copy-pasting.
 
 - Python 3.10+
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) installed (`pip install yt-dlp`)
-- A [Serper API](https://serper.dev/) key (free tier available)
-- A [Jina AI](https://jina.ai/) API key (optional, but recommended)
+- A [Serper API](https://serper.dev/) key (free tier available) — for search
+- A [Jina AI](https://jina.ai/) API key (optional, but recommended) — for web extraction
+- An LLM API key (e.g. [Gemini](https://ai.google.dev/) via OpenAI-compatible endpoint) — for generate & translate
 
 ### Install
 
@@ -40,7 +44,7 @@ pip install -e .
 
 ```bash
 cp .env.example .env
-# Edit .env — at minimum, add your SERPER_API_KEY
+# Edit .env — add your API keys
 ```
 
 ### Prepare your keywords file
@@ -65,17 +69,20 @@ Create a JSON file with your keywords:
 ### Run
 
 ```bash
-# Step 1: Search keywords → output/pending_review.json
+# Step 1: Search keywords on YouTube + Google
 seoscout search --keywords keywords.json
 
-# Step 2 (optional): Review and edit pending_review.json
-# Set "selected": false on items you don't want extracted
-
-# Step 3: Collect content from selected items
+# Step 2: Collect transcripts and web content
 seoscout collect --keywords keywords.json
+
+# Step 3: Generate articles from collected material
+seoscout generate --keywords keywords.json
+
+# Step 4: Translate to other languages
+seoscout translate --keywords keywords.json --lang es,pt,de,fr
 ```
 
-Or do it all in one command:
+Or do search + collect + generate in one command:
 
 ```bash
 seoscout run --keywords keywords.json
@@ -98,7 +105,6 @@ keywords.json
 ┌─────────────────────────────┐
 │  seoscout search             │  ← auto project name from topic_name
 │  ┌───────────┐ ┌──────────┐ │
-│  ┌───────────┐ ┌──────────┐ │
 │  │  YouTube   │ │  Google  │ │
 │  │  (yt-dlp)  │ │ (Serper) │ │
 │  └─────┬─────┘ └────┬─────┘ │
@@ -118,7 +124,30 @@ keywords.json
 │        └──────┬──────┘       │
 │               ▼              │
 │     collected/*.json         │
-│     (per-keyword content)    │
+│     (per-keyword material)   │
+└─────────────────────────────┘
+              │
+              ▼
+┌─────────────────────────────┐
+│  seoscout generate           │
+│        ┌──────────┐          │
+│        │   LLM    │          │
+│        └────┬─────┘          │
+│             ▼                │
+│     articles/en/*.md         │
+│     (SEO Markdown articles)  │
+└─────────────────────────────┘
+              │
+              ▼
+┌─────────────────────────────┐
+│  seoscout translate          │
+│  --lang es,pt,de,fr,ja,...  │
+│        ┌──────────┐          │
+│        │   LLM    │          │
+│        └────┬─────┘          │
+│             ▼                │
+│  articles/{lang}/*.md        │
+│  (multilingual articles)     │
 └─────────────────────────────┘
 ```
 
@@ -203,6 +232,49 @@ One file per keyword (e.g. `my_game_beginner_guide.json`):
 }
 ```
 
+### articles/en/*.md (Step 3 output)
+
+One Markdown file per keyword (e.g. `my-game-beginner-guide.md`):
+
+```markdown
+---
+title: "My Game Beginner Guide: Everything You Need to Know in 2026"
+description: "Complete beginner guide for My Game with tips, strategies, and walkthrough."
+keywords: "My Game beginner guide, My Game tips, My Game walkthrough"
+date: "2026-06-10"
+---
+
+## Getting Started
+
+Your article content here...
+
+## Tips and Tricks
+
+- Tip 1...
+- Tip 2...
+
+## FAQ
+
+**Q: Is My Game free to play?**
+A: Yes, My Game is...
+```
+
+### articles/{lang}/*.md (Step 4 output)
+
+Same structure as English articles, translated to the target language. Supported languages:
+
+| Code | Language | Code | Language |
+|------|----------|------|----------|
+| `es` | Spanish | `ko` | Korean |
+| `pt` | Portuguese (Brazil) | `ru` | Russian |
+| `de` | German | `zh` | Chinese |
+| `fr` | French | `vi` | Vietnamese |
+| `ja` | Japanese | `th` | Thai |
+| `ar` | Arabic | `id` | Indonesian |
+| `it` | Italian | `tr` | Turkish |
+| `pl` | Polish | `nl` | Dutch |
+| `hi` | Hindi | | |
+
 ## Configuration Reference
 
 All settings go in `.env` (copy from `.env.example` and fill in your keys):
@@ -230,6 +302,7 @@ JINA_API_KEY=your_jina_api_key_here
 |----------|:--------:|--------------|
 | `SERPER_API_KEY` | ✅ Yes | [serper.dev](https://serper.dev/) (free tier available) |
 | `JINA_API_KEY` | Recommended | [jina.ai](https://jina.ai/) (free tier available) |
+| `LLM_API_KEY` | For generate/translate | Any OpenAI-compatible API (Gemini, OpenAI, etc.) |
 
 ### 🌐 Proxy — For YouTube Transcript Extraction
 
@@ -296,6 +369,37 @@ USE_PROXY_FOR_EXTRACT=true
 | `JINA_CONCURRENCY` | `20` | Jina parallel requests |
 | `WEB_EXTRACT_RETRIES` | `3` | Retries for web extraction |
 
+### 🤖 LLM — For Generate & Translate
+
+Required for `seoscout generate` and `seoscout translate`. Any OpenAI-compatible API endpoint works (Gemini, OpenAI, DeepSeek, etc.).
+
+```bash
+LLM_API_KEY=your_api_key
+LLM_API_BASE_URL=https://api.apifast.tech/v1
+LLM_MODEL=gemini-2.5-flash
+LLM_MAX_TOKENS=24576
+```
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `LLM_API_KEY` | _(empty)_ | API key for the LLM |
+| `LLM_API_BASE_URL` | `https://api.apifast.tech/v1` | OpenAI-compatible endpoint |
+| `LLM_MODEL` | `gemini-2.5-flash` | Model name |
+| `LLM_TEMPERATURE` | `0.7` | Sampling temperature |
+| `LLM_MAX_TOKENS` | `24576` | Max output tokens per request |
+| `LLM_TIMEOUT` | `300` | Request timeout (seconds) |
+| `LLM_RETRY_ATTEMPTS` | `2` | Retries on failure |
+| `LLM_RETRY_DELAY` | `5` | Seconds between retries |
+
+### ⚡ Concurrency — Generate & Translate
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `GENERATE_BATCH_SIZE` | `100` | Articles per parallel batch |
+| `GENERATE_CONCURRENT_LIMIT` | `10` | Max concurrent generate requests |
+| `TRANSLATE_BATCH_SIZE` | `10` | Translations per parallel batch |
+| `TRANSLATE_BATCH_DELAY` | `1` | Seconds between translation batches |
+
 ### ⚙️ General
 
 | Variable | Default | Description |
@@ -333,6 +437,31 @@ YouTube sometimes blocks IPs that make too many requests. Solutions:
 Some pages block automated extraction. Try:
 - Reducing `JINA_CONCURRENCY` to avoid rate limits
 - Adding a `JINA_API_KEY` for higher rate limits
+
+### LLM generation fails or returns empty
+
+- Check `LLM_API_KEY` is set and valid
+- Try reducing `GENERATE_BATCH_SIZE` or `GENERATE_CONCURRENT_LIMIT` if rate limited
+- Check `LLM_MAX_TOKENS` — some models have lower limits
+- Check your API provider's status page
+
+### How to use a custom prompt template?
+
+Pass `--prompt /path/to/your/prompt.md` to `generate` or `translate`. The generate template uses `{merged_data}` and `{current_date}` variables. The translate template uses `$language_name`, `$lang_code`, and `$content` variables.
+
+### Can I use OpenAI / DeepSeek / other models?
+
+Yes — seoscout uses the OpenAI-compatible chat completions API. Set `LLM_API_BASE_URL` and `LLM_MODEL` to match your provider:
+
+```bash
+# OpenAI
+LLM_API_BASE_URL=https://api.openai.com/v1
+LLM_MODEL=gpt-4o
+
+# DeepSeek
+LLM_API_BASE_URL=https://api.deepseek.com/v1
+LLM_MODEL=deepseek-chat
+```
 
 ## License
 
