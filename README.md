@@ -7,7 +7,7 @@ seoscout is a CLI tool for SEO professionals and content creators. Feed it a lis
 - 🔍 **Search** YouTube (via yt-dlp) and Google (via Serper API) in parallel
 - 📥 **Collect** YouTube video transcripts and full web page text (via Jina Reader)
 - ✍️ **Generate** SEO-optimized MDX articles using LLM (with JS export metadata)
-- 🌍 **Translate** articles into 17 languages
+- 🌍 **Translate** articles into multiple languages
 
 No more manually opening every search result, copy-pasting, or paying for expensive content tools.
 
@@ -16,7 +16,7 @@ No more manually opening every search result, copy-pasting, or paying for expens
 - **Full pipeline** — keywords → search → collect → generate → translate
 - **Parallel search** — YouTube + Google at the same time
 - **LLM-powered writing** — generate SEO articles from collected material
-- **17 languages** — translate articles to Spanish, Japanese, Arabic, and more
+- **Multi-language** — translate articles to any language (Spanish, Japanese, Arabic, and more)
 - **Smart filtering** — filter by duration, topic relevance, and block competitor/spam domains
 - **Caching** — each source is only extracted once; re-runs skip cached content
 - **Proxy support** — rotating proxy for YouTube transcript extraction when IP-blocked
@@ -291,7 +291,7 @@ With categorized keywords, articles are organized into subdirectories: `articles
 
 ### articles/{lang}/*.mdx (Step 4 output)
 
-Same structure as English articles, translated to the target language. Supported languages:
+Same structure as English articles, translated to the target language. Any language code works — common ones:
 
 | Code | Language | Code | Language |
 |------|----------|------|----------|
@@ -303,7 +303,7 @@ Same structure as English articles, translated to the target language. Supported
 | `ar` | Arabic | `id` | Indonesian |
 | `it` | Italian | `tr` | Turkish |
 | `pl` | Polish | `nl` | Dutch |
-| `hi` | Hindi | | |
+| `hi` | Hindi | `tl` | Tagalog |
 
 ## Configuration Reference
 
