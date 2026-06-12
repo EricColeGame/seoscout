@@ -98,8 +98,8 @@ def main():
         help="Path to keywords JSON file (used to derive project name)"
     )
     trans_parser.add_argument(
-        "--lang", "-l", required=True,
-        help="Target languages, comma-separated (e.g. es,pt,de,fr,ja)"
+        "--lang", "-l",
+        help="Target languages, comma-separated (e.g. es,pt,de,fr,ja). If not set, reads from 'languages' field in keywords JSON."
     )
     trans_parser.add_argument(
         "--prompt",
@@ -189,6 +189,17 @@ async def _run_generate(args):
 
 async def _run_translate(args):
     from .translate import run_translate
+    from .core.utils import load_languages_from_json
+
+    # --lang not provided → read from keywords JSON
+    if not args.lang:
+        langs = load_languages_from_json(args.keywords)
+        if not langs:
+            print("❌ No --lang specified and no 'languages' field in keywords JSON")
+            sys.exit(1)
+        args.lang = ",".join(langs)
+        print(f"🌐 Languages from JSON: {args.lang}\n")
+
     await run_translate(
         args.project,
         args.lang,
@@ -202,6 +213,8 @@ async def _run_all(args):
     from .search import run_search
     from .collect import run_collect
     from .generate import run_generate
+    from .translate import run_translate
+    from .core.utils import load_languages_from_json
 
     await run_search(args.project, args.keywords)
     await run_collect(args.project)
@@ -211,6 +224,20 @@ async def _run_all(args):
         prompt_path=args.prompt,
         overwrite=args.overwrite,
     )
+
+    # If languages are specified in JSON, auto-translate
+    langs = load_languages_from_json(args.keywords)
+    if langs:
+        lang_str = ",".join(langs)
+        print(f"\n{'='*70}")
+        print(f"  Step 4: Translate [{args.project}] → {lang_str}")
+        print(f"{'='*70}")
+        await run_translate(
+            args.project,
+            lang_str,
+            prompt_path=None,
+            overwrite=args.overwrite,
+        )
 
 
 if __name__ == "__main__":

@@ -115,6 +115,23 @@ def load_keywords_from_json(json_file: str) -> List[Dict]:
     return results
 
 
+def load_languages_from_json(json_file: str) -> List[str]:
+    """
+    Load target languages from a keywords JSON file.
+
+    Looks for a top-level "languages" array, e.g.:
+        {"languages": ["es", "pt", "de", "fr"]}
+
+    Returns:
+        List of language codes, or empty list if not specified.
+    """
+    data = load_json(json_file)
+    langs = data.get("languages", [])
+    if isinstance(langs, list):
+        return [l.strip() for l in langs if isinstance(l, str) and l.strip()]
+    return []
+
+
 class ProgressBar:
     """简单的进度条"""
 

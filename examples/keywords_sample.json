@@ -1,5 +1,6 @@
 {
   "topic_name": "My Game",
+  "languages": ["es", "pt", "de", "fr"],
   "categories": [
     {
       "category": "Guide",

@@ -6,7 +6,7 @@ seoscout is a CLI tool for SEO professionals and content creators. Feed it a lis
 
 - 🔍 **Search** YouTube (via yt-dlp) and Google (via Serper API) in parallel
 - 📥 **Collect** YouTube video transcripts and full web page text (via Jina Reader)
-- ✍️ **Generate** SEO-optimized Markdown articles using LLM
+- ✍️ **Generate** SEO-optimized MDX articles using LLM (with JS export metadata)
 - 🌍 **Translate** articles into 17 languages
 
 No more manually opening every search result, copy-pasting, or paying for expensive content tools.
@@ -56,6 +56,7 @@ Create a JSON file with your keywords:
 ```json
 {
   "topic_name": "My Game",
+  "languages": ["es", "pt", "de", "fr"],
   "categories": [
     {
       "category": "Guide",
@@ -89,7 +90,8 @@ Create a JSON file with your keywords:
 }
 ```
 
-> `topic_name` is optional. When set, search results that don't mention the topic in their title or snippet are automatically filtered out. The categorized format organizes output into subdirectories: `articles/en/guide/`, `articles/en/tier-list/`, etc.
+> - `topic_name` is optional. When set, search results that don't mention the topic in their title or snippet are automatically filtered out. The categorized format organizes output into subdirectories: `articles/en/guide/`, `articles/en/tier-list/`, etc.
+> - `languages` is optional. When set in the keywords JSON, `seoscout run` will automatically translate articles to the specified languages after generation. If not set, `seoscout translate` requires the `--lang` flag.
 
 ### Run
 
@@ -159,8 +161,9 @@ keywords.json
 │        │   LLM    │          │
 │        └────┬─────┘          │
 │             ▼                │
-│     articles/en/*.md         │
-│     (SEO Markdown articles)  │
+│     articles/en/*.mdx        │
+│     (MDX articles w/ JS      │
+│      export metadata)        │
 └─────────────────────────────┘
               │
               ▼
@@ -171,7 +174,7 @@ keywords.json
 │        │   LLM    │          │
 │        └────┬─────┘          │
 │             ▼                │
-│  articles/{lang}/*.md        │
+│  articles/{lang}/*.mdx       │
 │  (multilingual articles)     │
 └─────────────────────────────┘
 ```
@@ -257,17 +260,17 @@ One file per keyword (e.g. `my_game_beginner_guide.json`):
 }
 ```
 
-### articles/en/*.md (Step 3 output)
+### articles/en/*.mdx (Step 3 output)
 
-One Markdown file per keyword (e.g. `my-game-beginner-guide.md`):
+One MDX file per keyword (e.g. `my-game-beginner-guide.mdx`). Uses JavaScript `export const metadata` syntax for compatibility with Next.js MDX wiki projects:
 
-```markdown
----
-title: "My Game Beginner Guide: Everything You Need to Know in 2026"
-description: "Complete beginner guide for My Game with tips, strategies, and walkthrough."
-keywords: "My Game beginner guide, My Game tips, My Game walkthrough"
-date: "2026-06-10"
----
+```mdx
+export const metadata = {
+  title: "My Game Beginner Guide: Everything You Need to Know in 2026",
+  description: "Complete beginner guide for My Game with tips, strategies, and walkthrough.",
+  category: "guide",
+  date: "2026-06-10",
+}
 
 ## Getting Started
 
@@ -284,7 +287,9 @@ Your article content here...
 A: Yes, My Game is...
 ```
 
-### articles/{lang}/*.md (Step 4 output)
+With categorized keywords, articles are organized into subdirectories: `articles/en/guide/`, `articles/en/bosses/`, `articles/en/tier-list/`, etc.
+
+### articles/{lang}/*.mdx (Step 4 output)
 
 Same structure as English articles, translated to the target language. Supported languages:
 
@@ -472,7 +477,7 @@ Some pages block automated extraction. Try:
 
 ### How to use a custom prompt template?
 
-Pass `--prompt /path/to/your/prompt.md` to `generate` or `translate`. The generate template uses `{merged_data}` and `{current_date}` variables. The translate template uses `$language_name`, `$lang_code`, and `$content` variables.
+Pass `--prompt /path/to/your/prompt.md` to `generate` or `translate`. The generate template uses `{merged_data}`, `{current_date}`, and `{category}` variables. The translate template uses `$language_name`, `$lang_code`, and `$content` variables.
 
 ### Can I use OpenAI / DeepSeek / other models?
 
