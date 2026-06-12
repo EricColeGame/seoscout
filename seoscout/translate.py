@@ -54,14 +54,15 @@ def load_prompt_template(prompt_path: str = None) -> str:
 
 
 def clean_llm_output(content: str) -> str:
-    """Strip code fences."""
+    """Strip code fences (handles any language tag like ```javascript, ```mdx, etc.)."""
     content = content.strip()
-    if content.startswith('```markdown'):
-        content = content[len('```markdown'):].lstrip('\n')
-    elif content.startswith('```md'):
-        content = content[len('```md'):].lstrip('\n')
-    elif content.startswith('```'):
-        content = content[3:].lstrip('\n')
+    # Match opening code fence with optional language tag (e.g. ```javascript, ```mdx, ```markdown)
+    if content.startswith('```'):
+        first_newline = content.find('\n')
+        if first_newline != -1:
+            content = content[first_newline + 1:]
+        else:
+            content = content[3:]
     if content.rstrip().endswith('```'):
         content = content.rstrip()[:-3].rstrip()
     return content
