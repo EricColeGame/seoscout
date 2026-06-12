@@ -109,7 +109,7 @@ seoscout generate --keywords keywords.json
 seoscout translate --keywords keywords.json --lang es,pt,de,fr
 ```
 
-Or do search + collect + generate in one command:
+Or do search + collect + generate (and translate if `languages` is set) in one command:
 
 ```bash
 seoscout run --keywords keywords.json

@@ -117,7 +117,7 @@ def main():
     # ── run (search + collect + generate) ──
     run_parser = subparsers.add_parser(
         "run",
-        help="Search, collect, and generate in one step"
+        help="Search, collect, generate (and translate if languages set) in one step"
     )
     run_parser.add_argument(
         "--keywords", "-k", required=True,
