@@ -2,7 +2,7 @@
 """
 Step 4: Translate articles to multiple languages.
 
-Reads articles/en/*.md, translates via LLM, outputs to articles/{lang}/*.md.
+Reads articles/en/*.mdx (or *.md), translates via LLM, outputs to articles/{lang}/*.mdx.
 """
 
 import asyncio
@@ -68,12 +68,16 @@ def clean_llm_output(content: str) -> str:
 
 
 def validate_markdown(content: str) -> tuple:
-    """Basic check: non-empty, has structure."""
+    """Basic check: non-empty, has structure (JS export metadata or headings)."""
     if not content or not content.strip():
         return False, "Empty content"
-    has_structure = '---' in content[:20] or '## ' in content or '# ' in content
+    has_structure = (
+        'export const metadata' in content[:200]
+        or '## ' in content
+        or '# ' in content
+    )
     if not has_structure:
-        return False, "No heading or frontmatter found"
+        return False, "No heading or metadata export found"
     if len(content) < 100:
         return False, f"Too short ({len(content)} chars)"
     return True, ""
@@ -124,9 +128,20 @@ async def run_translate(
         print("     Run `seoscout generate` first")
         return
 
-    articles = sorted(en_dir.glob("**/*.md"))
+    # Read .mdx (preferred) and .md files from English articles
+    mdx_files = sorted(en_dir.glob("**/*.mdx"))
+    md_files = sorted(en_dir.glob("**/*.md"))
+    # Deduplicate by stem: prefer .mdx over .md
+    seen = set()
+    articles = []
+    for f in mdx_files + md_files:
+        key = str(f.relative_to(en_dir).with_suffix(''))
+        if key not in seen:
+            seen.add(key)
+            articles.append(f)
+
     if not articles:
-        print("  ❌ No .md files in articles/en/")
+        print("  ❌ No .mdx/.md files in articles/en/")
         return
 
     if test:
@@ -149,7 +164,9 @@ async def run_translate(
         relative = article_path.relative_to(en_dir)
 
         for lang_code in target_langs:
-            output_path = Path(Config.DATA_DIR) / "articles" / lang_code / relative
+            # Output as .mdx (change extension if source is .md)
+            out_relative = relative.with_suffix('.mdx')
+            output_path = Path(Config.DATA_DIR) / "articles" / lang_code / out_relative
 
             if output_path.exists() and not overwrite:
                 continue
@@ -224,7 +241,7 @@ async def run_translate(
                     output_path.parent.mkdir(parents=True, exist_ok=True)
                     output_path.write_text(cleaned, encoding='utf-8')
                     saved += 1
-                    print(f"    ✅ [{lang_code.upper()}] {article_name}.md")
+                    print(f"    ✅ [{lang_code.upper()}] {article_name}.mdx")
                 else:
                     # Single repair attempt
                     repair_prompt = _build_repair_prompt(
@@ -242,7 +259,7 @@ async def run_translate(
                             output_path.parent.mkdir(parents=True, exist_ok=True)
                             output_path.write_text(cleaned, encoding='utf-8')
                             saved += 1
-                            print(f"    ✅ [{lang_code.upper()}] {article_name}.md (repaired)")
+                            print(f"    ✅ [{lang_code.upper()}] {article_name}.mdx (repaired)")
                             continue
 
                     failed += 1
@@ -259,7 +276,7 @@ async def run_translate(
     print(f"  Failed:  {failed}")
     for lang_code in target_langs:
         lang_dir = Path(Config.DATA_DIR) / "articles" / lang_code
-        count = len(list(lang_dir.glob("*.md"))) if lang_dir.exists() else 0
+        count = len(list(lang_dir.glob("**/*.mdx"))) if lang_dir.exists() else 0
         print(f"  {resolved_names[lang_code]} ({lang_code}): {count} files")
     client.print_stats()
     print("=" * 70)
@@ -282,6 +299,6 @@ def _build_repair_prompt(
         f"The previous translation for \"{article_name}\" to {lang_name} had issues:\n"
         f"  Error: {error}\n\n"
         f"Regenerate the FULL translated article from scratch. Fix the issues above.\n"
-        f"Output ONLY valid Markdown starting with --- frontmatter.\n"
-        f"Do NOT wrap in code blocks."
+        f"Output ONLY valid MDX starting with `export const metadata = {{`.\n"
+        f"Do NOT wrap in code blocks. Do NOT use YAML frontmatter (---)."
     )

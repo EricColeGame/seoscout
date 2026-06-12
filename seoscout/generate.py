@@ -3,7 +3,7 @@
 Step 3: Generate articles from collected material.
 
 Reads collected/*.json (output from collect step), sends to LLM,
-outputs Markdown articles to articles/en/.
+outputs MDX articles (JS export metadata) to articles/en/.
 """
 
 import asyncio
@@ -60,14 +60,14 @@ def validate_markdown(content: str) -> tuple:
     """Basic Markdown validation. Returns (is_valid, error_msg)."""
     if not content or not content.strip():
         return False, "Empty content"
-    # Must have some heading or frontmatter
+    # Must have some heading or JS export metadata
     has_structure = (
-        '---' in content[:20]
+        'export const metadata' in content[:200]
         or '## ' in content
         or '# ' in content
     )
     if not has_structure:
-        return False, "No heading or frontmatter found"
+        return False, "No heading or metadata export found"
     if len(content) < 200:
         return False, f"Content too short ({len(content)} chars)"
     return True, ""
@@ -151,10 +151,10 @@ async def run_generate(
             collected_path = f"{collected_dir}/{cat_slug}/{fname}.json"
             if not os.path.exists(collected_path):
                 collected_path = f"{collected_dir}/{fname}.json"
-            output_path = f"{articles_dir}/{cat_slug}/{slug}.md"
+            output_path = f"{articles_dir}/{cat_slug}/{slug}.mdx"
         else:
             collected_path = f"{collected_dir}/{fname}.json"
-            output_path = f"{articles_dir}/{slug}.md"
+            output_path = f"{articles_dir}/{slug}.mdx"
 
         if not os.path.exists(collected_path):
             skipped_no_data += 1
@@ -172,10 +172,12 @@ async def run_generate(
 
         merged_json = json.dumps(merged, indent=2, ensure_ascii=False)
         current_date = datetime.now().strftime('%Y-%m-%d')
+        cat_slug_final = cat_slug if category else "general"
 
         prompt = prompt_template.format(
             merged_data=merged_json,
             current_date=current_date,
+            category=cat_slug_final,
         )
 
         prompts.append((prompt, {'keyword': keyword, 'slug': slug, 'output_path': output_path}))
@@ -216,7 +218,7 @@ async def run_generate(
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(cleaned)
             saved += 1
-            print(f"  ✅ {meta['slug']}.md")
+            print(f"  ✅ {meta['slug']}.mdx")
         else:
             # Queue for repair
             repair_prompt = _build_repair_prompt(prompt_template, meta, cleaned, err)
@@ -242,10 +244,10 @@ async def run_generate(
                 with open(output_path, 'w', encoding='utf-8') as f:
                     f.write(cleaned)
                 saved += 1
-                print(f"  ✅ (repaired) {meta['slug']}.md")
+                print(f"  ✅ (repaired) {meta['slug']}.mdx")
             else:
                 failed += 1
-                print(f"  ❌ {meta['slug']}.md — still invalid after repair")
+                print(f"  ❌ {meta['slug']}.mdx — still invalid after repair")
 
     # Summary
     print("\n" + "=" * 70)
@@ -267,6 +269,6 @@ def _build_repair_prompt(template: str, meta: dict, content: str, error: str) ->
         f"Previous draft (for reference, do NOT repeat the same mistakes):\n"
         f"{content[:2000]}\n\n"
         f"Regenerate a COMPLETE article from scratch. Fix the issues above.\n"
-        f"Output ONLY valid Markdown starting with --- frontmatter.\n"
+        f"Output ONLY valid MDX starting with `export const metadata = {{`.\n"
         f"Do NOT wrap in code blocks."
     )
