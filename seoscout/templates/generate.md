@@ -2,6 +2,7 @@
 Variables (auto-injected by generate.py):
 - {merged_data}    : Collected reference material (JSON — YouTube transcripts + web content)
 - {current_date}   : Today's date (YYYY-MM-DD)
+- {category}       : Content category slug (e.g. bosses, races, guide)
 -->
 
 You are an experienced SEO content writer. Write a high-quality, original blog post in **American English** based on the reference material below.
@@ -34,9 +35,10 @@ Generate a title based on the keyword field in the reference material:
 
 ## Article Structure
 
-- Start with a frontmatter block (see format below)
+- Start with a JS metadata export block (see format below)
 - **Do not include an H1 heading** — the title in metadata serves as H1; start with H2 sections
 - 4–6 H2 headings, optional H3 subheadings
+- **Use Markdown tables extensively** (at least 3–5 tables) for comparisons, data, steps, rankings, stats, etc.
 - Use bullet lists where appropriate
 - Keep paragraphs under 120 words
 - End with a FAQ section (3–4 Q&A pairs, using the keyword at least once)
@@ -49,23 +51,23 @@ Generate a title based on the keyword field in the reference material:
 
 ## Output Format
 
-Output a Markdown file that begins with a metadata block:
+Output an MDX file that begins with a JavaScript metadata export:
 
 ```
----
-title: "Article Title (60–120 chars, includes keyword)"
-description: "SEO-optimized description (max 155 chars)"
-keywords: "main keyword, related keyword 1, related keyword 2"
-date: "{current_date}"
----
+export const metadata = {
+  title: "Article Title (60–120 chars, includes keyword)",
+  description: "SEO-optimized description (max 155 chars)",
+  category: "{category}",
+  date: "{current_date}",
+}
 ```
 
-Then the article body in standard Markdown.
+Then the article body in standard Markdown (no code fences, no H1 heading).
 
 ## Important
 
 - Do NOT wrap the article in code blocks (```)
-- Start directly with the `---` frontmatter
+- Start directly with `export const metadata = {`
 - Write in natural, engaging American English
 - Follow Google "Helpful Content" guidelines
 - Focus on user value, avoid keyword stuffing
