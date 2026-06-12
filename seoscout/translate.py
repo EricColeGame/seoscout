@@ -104,18 +104,14 @@ async def run_translate(
     print(f"  Step 4: Translate [{project}]")
     print("=" * 70)
 
-    # Parse languages
+    # Parse languages (any code accepted, name resolved from map or title-cased)
     target_langs = [l.strip() for l in lang.split(',') if l.strip()]
-    unknown = [l for l in target_langs if l not in LANG_NAMES]
-    if unknown:
-        print(f"  ⚠️  Unknown language codes: {unknown}")
-        print(f"     Supported: {', '.join(sorted(LANG_NAMES.keys()))}")
-    target_langs = [l for l in target_langs if l in LANG_NAMES]
     if not target_langs:
-        print("  ❌ No valid target languages")
+        print("  ❌ No target languages specified")
         return
 
-    print(f"  🌍 Target: {', '.join(f'{LANG_NAMES[l]} ({l})' for l in target_langs)}\n")
+    resolved_names = {l: LANG_NAMES.get(l, l.upper()) for l in target_langs}
+    print(f"  🌍 Target: {', '.join(f'{resolved_names[l]} ({l})' for l in target_langs)}\n")
 
     # Load prompt template
     prompt_template_str = load_prompt_template(prompt_path)
@@ -159,7 +155,7 @@ async def run_translate(
                 continue
 
             prompt = prompt_template.substitute(
-                language_name=LANG_NAMES[lang_code],
+                language_name=resolved_names[lang_code],
                 lang_code=lang_code,
                 content=en_content,
             )
@@ -264,7 +260,7 @@ async def run_translate(
     for lang_code in target_langs:
         lang_dir = Path(Config.DATA_DIR) / "articles" / lang_code
         count = len(list(lang_dir.glob("*.md"))) if lang_dir.exists() else 0
-        print(f"  {LANG_NAMES[lang_code]} ({lang_code}): {count} files")
+        print(f"  {resolved_names[lang_code]} ({lang_code}): {count} files")
     client.print_stats()
     print("=" * 70)
 
