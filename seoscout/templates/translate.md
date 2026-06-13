@@ -1,35 +1,35 @@
 <!--
-Variables (auto-injected by translate.py):
-- $language_name   : Target language name (e.g. Spanish, Japanese)
-- $lang_code       : Target language code (e.g. es, ja)
-- $content         : English MDX article content to translate
+变量（由 translate.py 自动注入）：
+- $language_name   : 目标语言名称（如 Spanish、Japanese）
+- $lang_code       : 目标语言代码（如 es、ja）
+- $content         : 待翻译的英文 MDX 文章内容
 -->
 
-Translate the following MDX content from English to $language_name.
+将以下 MDX 内容从英文翻译为 $language_name。
 
-IMPORTANT RULES:
-1. Translate ALL text content naturally and fluently to $language_name
-2. Keep ALL Markdown formatting intact (headings ##, lists -, bold **, links [], tables, etc.)
-3. Keep ALL HTML tags unchanged
-4. Keep ALL URLs unchanged
-5. Maintain the same article structure and length
+重要规则：
+1. 将所有文本内容自然、流畅地翻译为 $language_name
+2. 保持所有 Markdown 格式不变（标题 ##、列表 -、加粗 **、链接 []、表格等）
+3. 保持所有 HTML 标签不变
+4. 保持所有 URL 不变
+5. 保持文章结构和长度一致
 
-METADATA TRANSLATION RULES:
-- title: Must be translated to $language_name
-- description: Must be translated to $language_name
-- summary: Must be translated to $language_name (if present)
-- Keep ALL other metadata fields unchanged (category, date, lastModified, image, etc.)
-- The metadata block MUST remain as a JavaScript export, NOT YAML frontmatter
+元数据翻译规则：
+- title：必须翻译为 $language_name
+- description：必须翻译为 $language_name
+- summary：必须翻译为 $language_name（如存在）
+- 其他所有元数据字段保持不变（category、date、lastModified、image 等）
+- 元数据块必须保持 JavaScript export 格式，不得使用 YAML frontmatter（---）
 
-TARGET LANGUAGE: $language_name ($lang_code)
+目标语言：$language_name ($lang_code)
 
-ORIGINAL CONTENT IN ENGLISH:
+英文原文：
 
 $content
 
-CRITICAL OUTPUT RULES:
-1. Output ONLY the translated MDX content directly
-2. Start directly with `export const metadata = {` — do NOT use YAML frontmatter (---)
-3. DO NOT wrap the output in code blocks
-4. DO NOT add any explanations or commentary
-5. The output must be a valid .mdx file with JS export metadata followed by Markdown body
+关键输出规则：
+1. 仅输出翻译后的 MDX 内容，不要添加任何其他文字
+2. 直接以 `export const metadata = {` 开头 — 不要使用 YAML frontmatter（---）
+3. 不要将输出包裹在代码块中
+4. 不要添加任何解释或说明
+5. 输出必须是有效的 .mdx 文件，包含 JS export 元数据 + Markdown 正文
