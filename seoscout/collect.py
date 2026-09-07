@@ -184,8 +184,20 @@ async def run_collect(project: str):
         category = kw_data.get("category", "")
         keyword_result = results.get(keyword, {"youtube": [], "web": []})
 
+        # 兜底机制：若 Jina/YouTube 提取均未成功，从 search_results 的 web snippet 补足，避免因单一外链抓取失败而丢词
         if not keyword_result["youtube"] and not keyword_result["web"]:
-            continue
+            if "web" in kw_data and kw_data["web"].get("items"):
+                for item_dict in kw_data["web"]["items"]:
+                    snip = item_dict.get("snippet", "")
+                    if snip:
+                        keyword_result["web"].append({
+                            "type": "web",
+                            "title": item_dict.get("title", ""),
+                            "url": item_dict.get("url", ""),
+                            "content": snip
+                        })
+            if not keyword_result["youtube"] and not keyword_result["web"]:
+                continue
 
         keyword_file = keyword_to_filename(keyword)
         if category:

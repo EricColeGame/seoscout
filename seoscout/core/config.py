@@ -207,11 +207,13 @@ class Config:
         if not cls.USE_PROXY or not cls.TUNNEL_HOST:
             return None
 
-        if cls.TUNNEL_PROXY_FORMAT == "tagged":
+        if cls.TUNNEL_PROXY_FORMAT == "tagged" and cls.TUNNEL_USER and cls.TUNNEL_PASS:
             channel = f"{cls.TUNNEL_CHANNEL_PREFIX}-default"
             return f"http://{cls.TUNNEL_USER}:{cls.TUNNEL_PASS}:{channel}:{cls.TUNNEL_TTL}@{cls.TUNNEL_HOST}:{cls.TUNNEL_PORT}"
-        else:
+        elif cls.TUNNEL_USER and cls.TUNNEL_PASS:
             return f"http://{cls.TUNNEL_USER}:{cls.TUNNEL_PASS}@{cls.TUNNEL_HOST}:{cls.TUNNEL_PORT}"
+        else:
+            return f"http://{cls.TUNNEL_HOST}:{cls.TUNNEL_PORT}"
 
     @classmethod
     def use_proxy_for_stage(cls, stage: str) -> bool:
@@ -231,11 +233,13 @@ class Config:
         if not cls.use_proxy_for_stage(stage) or not cls.TUNNEL_HOST:
             return None
 
-        if cls.TUNNEL_PROXY_FORMAT == "tagged":
+        if cls.TUNNEL_PROXY_FORMAT == "tagged" and cls.TUNNEL_USER and cls.TUNNEL_PASS:
             channel = f"{cls.TUNNEL_CHANNEL_PREFIX}-{stage}"
             return f"http://{cls.TUNNEL_USER}:{cls.TUNNEL_PASS}:{channel}:{cls.TUNNEL_TTL}@{cls.TUNNEL_HOST}:{cls.TUNNEL_PORT}"
-        else:
+        elif cls.TUNNEL_USER and cls.TUNNEL_PASS:
             return f"http://{cls.TUNNEL_USER}:{cls.TUNNEL_PASS}@{cls.TUNNEL_HOST}:{cls.TUNNEL_PORT}"
+        else:
+            return f"http://{cls.TUNNEL_HOST}:{cls.TUNNEL_PORT}"
 
     @classmethod
     def validate(cls) -> bool:

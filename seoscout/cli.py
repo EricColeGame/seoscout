@@ -124,6 +124,14 @@ def main():
         help="Path to keywords JSON file"
     )
     run_parser.add_argument(
+        "--output-dir", "-o",
+        help="Target output directory for articles"
+    )
+    run_parser.add_argument(
+        "--languages", "-l",
+        help="Path to languages.json or comma-separated list of languages"
+    )
+    run_parser.add_argument(
         "--prompt",
         help="Path to custom prompt template for generation"
     )
@@ -214,7 +222,19 @@ async def _run_all(args):
     from .collect import run_collect
     from .generate import run_generate
     from .translate import run_translate
-    from .core.utils import load_languages_from_json
+    from .core.utils import load_languages_from_json, load_json
+    from .core.config import Config
+
+    # 如果指定了 --output-dir，设置 OUTPUT_DIR 环境变量并重定向 Config
+    if getattr(args, "output_dir", None):
+        out_d = os.path.abspath(args.output_dir)
+        # 如果 output_dir 类似 .../articles，将 parent 设为 OUTPUT_DIR，project 设为 articles 所在父目录名
+        if os.path.basename(out_d) == "articles":
+            Config.OUTPUT_DIR = os.path.dirname(os.path.dirname(out_d))
+            args.project = os.path.basename(os.path.dirname(out_d))
+        else:
+            Config.OUTPUT_DIR = os.path.dirname(out_d)
+            args.project = os.path.basename(out_d)
 
     await run_search(args.project, args.keywords)
     await run_collect(args.project)
@@ -225,8 +245,25 @@ async def _run_all(args):
         overwrite=args.overwrite,
     )
 
-    # If languages are specified in JSON, auto-translate
-    langs = load_languages_from_json(args.keywords)
+    # 优先从 --languages 参数获取目标语言
+    langs = []
+    if getattr(args, "languages", None):
+        if os.path.isfile(args.languages):
+            try:
+                l_data = load_json(args.languages)
+                if isinstance(l_data, dict):
+                    langs = l_data.get("languages", [])
+                elif isinstance(l_data, list):
+                    langs = l_data
+            except Exception as e:
+                print(f"  ⚠️ 读取 languages 文件失败: {e}")
+        else:
+            langs = [l.strip() for l in args.languages.split(",") if l.strip()]
+
+    # 其次从 keywords JSON 中读取
+    if not langs:
+        langs = load_languages_from_json(args.keywords)
+
     if langs:
         lang_str = ",".join(langs)
         print(f"\n{'='*70}")
@@ -238,6 +275,45 @@ async def _run_all(args):
             prompt_path=None,
             overwrite=args.overwrite,
         )
+
+    # 同步产物到指定的 --output-dir 目标路径
+    if getattr(args, "output_dir", None):
+        target_articles = os.path.abspath(args.output_dir)
+        source_articles = os.path.join(Config.DATA_DIR, "articles")
+        if target_articles != source_articles and os.path.isdir(source_articles):
+            import shutil
+            os.makedirs(target_articles, exist_ok=True)
+            for item in os.listdir(source_articles):
+                s = os.path.join(source_articles, item)
+                d = os.path.join(target_articles, item)
+                if os.path.isdir(s):
+                    shutil.copytree(s, d, dirs_exist_ok=True)
+                else:
+                    shutil.copy2(s, d)
+            print(f"\n📦 产物已同步至: {target_articles}")
+
+    # 校验一词一页
+    en_dir = os.path.join(target_articles if getattr(args, "output_dir", None) else Config.DATA_DIR, "articles", "en") if not getattr(args, "output_dir", None) else os.path.join(os.path.abspath(args.output_dir), "en")
+    from .core.utils import load_keywords_from_json
+    kw_entries = load_keywords_from_json(args.keywords)
+    target_count = len(kw_entries)
+    if os.path.isdir(en_dir):
+        import glob
+        mdx_files = glob.glob(os.path.join(en_dir, "**/*.mdx"), recursive=True)
+        if len(mdx_files) != target_count:
+            print(f"\n❌ [一词一页校验失败] 英文 MDX 篇数 ({len(mdx_files)}) != 关键词数 ({target_count})")
+            sys.exit(1)
+        else:
+            print(f"\n✅ [一词一页强校验通过] 英文 MDX 篇数 ({len(mdx_files)}) == 关键词数 ({target_count})")
+            # 校验多语言
+            for l in langs:
+                l_dir = os.path.join(Config.DATA_DIR, "articles", l)
+                l_files = glob.glob(os.path.join(l_dir, "**/*.mdx"), recursive=True)
+                if len(l_files) != target_count:
+                    print(f"❌ [多语言篇数校验失败] 语言 {l} MDX 篇数 ({len(l_files)}) != 英文篇数 ({target_count})")
+                    sys.exit(1)
+                else:
+                    print(f"✅ [多语言篇数校验通过] 语言 {l} MDX 篇数 ({len(l_files)}) == 英文篇数 ({target_count})")
 
 
 if __name__ == "__main__":
