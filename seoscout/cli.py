@@ -139,6 +139,10 @@ def main():
         "--overwrite", action="store_true",
         help="Overwrite existing articles"
     )
+    run_parser.add_argument(
+        "--domain",
+        help="Target website domain (e.g. infalsus.top)"
+    )
 
     args = parser.parse_args()
 
@@ -235,6 +239,7 @@ async def _run_all(args):
         else:
             Config.OUTPUT_DIR = os.path.dirname(out_d)
             args.project = os.path.basename(out_d)
+        os.environ["OUTPUT_DIR"] = Config.OUTPUT_DIR
 
     await run_search(args.project, args.keywords)
     await run_collect(args.project)
