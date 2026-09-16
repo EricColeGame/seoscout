@@ -197,6 +197,70 @@ from datetime import datetime
 import re
 
 
+# ============ MDX 标签规范化 ============
+
+# HTML void 标签：MDX/JSX 编译器要求必须自闭合（<br />），
+# 否则 next build 阶段会报 "Expected a corresponding JSX closing tag"。
+VOID_TAGS_PATTERN = r"br|hr|img|input|meta|link|source|area|base|col|embed|param|track|wbr"
+
+# 匹配 void 标签（含属性），已自闭合的也会命中，便于统一成 " />" 形式
+_VOID_TAG_RE = re.compile(
+    rf"<({VOID_TAGS_PATTERN})(?=[\s/>])([^<>]*?)\s*/?>",
+    re.IGNORECASE,
+)
+
+
+def normalize_mdx_void_tags(content: str) -> str:
+    """
+    将未自闭合的 HTML void 标签转换为 JSX 自闭合形式（如 <br> -> <br />）。
+
+    Markdown 围栏代码块内的内容保持原样，避免改动示例代码。
+
+    Args:
+        content: MDX 文本
+
+    Returns:
+        规范化后的 MDX 文本
+    """
+    if not content or '<' not in content:
+        return content
+
+    # 按围栏代码块切分，代码块原样保留
+    parts = re.split(r"(^```.*?^```)", content, flags=re.DOTALL | re.MULTILINE)
+
+    def _fix_void_tags(segment: str) -> str:
+        return _VOID_TAG_RE.sub(
+            lambda match: f"<{match.group(1)}{match.group(2).rstrip()} />",
+            segment,
+        )
+
+    return "".join(
+        part if part.startswith("```") else _fix_void_tags(part)
+        for part in parts
+    )
+
+
+def find_unclosed_void_tag(content: str) -> str:
+    """
+    查找第一个未自闭合的 void 标签，用于校验/触发修复。
+
+    Args:
+        content: MDX 文本
+
+    Returns:
+        命中的标签名（如 "br"），未命中返回空字符串
+    """
+    if not content or '<' not in content:
+        return ""
+    for part in re.split(r"(^```.*?^```)", content, flags=re.DOTALL | re.MULTILINE):
+        if part.startswith("```"):
+            continue
+        for match in _VOID_TAG_RE.finditer(part):
+            if not match.group(0).rstrip().endswith('/>'):
+                return match.group(1)
+    return ""
+
+
 def sanitize_filename(filename: str, max_length: int = 100) -> str:
     """
     清理文件名，移除特殊字符

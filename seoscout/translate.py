@@ -15,7 +15,7 @@ from datetime import datetime
 
 from .core.config import Config
 from .core.llm_client import LLMClient
-from .core.utils import ensure_dir
+from .core.utils import ensure_dir, find_unclosed_void_tag, normalize_mdx_void_tags
 
 
 # ── language map ────────────────────────────────────────────────
@@ -65,7 +65,7 @@ def clean_llm_output(content: str) -> str:
             content = content[3:]
     if content.rstrip().endswith('```'):
         content = content.rstrip()[:-3].rstrip()
-    return content
+    return normalize_mdx_void_tags(content)
 
 
 def validate_markdown(content: str) -> tuple:
@@ -81,6 +81,10 @@ def validate_markdown(content: str) -> tuple:
         return False, "No heading or metadata export found"
     if len(content) < 100:
         return False, f"Too short ({len(content)} chars)"
+    # MDX/JSX 编译要求 void 标签自闭合，否则 next build 会失败
+    unclosed = find_unclosed_void_tag(content)
+    if unclosed:
+        return False, f"Void tag <{unclosed}> not self-closed (use <{unclosed} />)"
     return True, ""
 
 

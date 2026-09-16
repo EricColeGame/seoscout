@@ -15,7 +15,13 @@ from pathlib import Path
 
 from .core.config import Config
 from .core.llm_client import LLMClient
-from .core.utils import load_json, save_json, ensure_dir
+from .core.utils import (
+    load_json,
+    save_json,
+    ensure_dir,
+    find_unclosed_void_tag,
+    normalize_mdx_void_tags,
+)
 
 
 # ── helpers ─────────────────────────────────────────────────────
@@ -43,7 +49,7 @@ def load_prompt_template(prompt_path: str = None) -> str:
 
 
 def clean_llm_output(content: str) -> str:
-    """Strip code fences and trim."""
+    """Strip code fences, trim, and self-close MDX void tags (<br> -> <br />)."""
     content = content.strip()
     if content.startswith('```markdown'):
         content = content[len('```markdown'):].lstrip('\n')
@@ -53,7 +59,7 @@ def clean_llm_output(content: str) -> str:
         content = content[3:].lstrip('\n')
     if content.rstrip().endswith('```'):
         content = content.rstrip()[:-3].rstrip()
-    return content
+    return normalize_mdx_void_tags(content)
 
 
 def validate_markdown(content: str) -> tuple:
@@ -70,6 +76,10 @@ def validate_markdown(content: str) -> tuple:
         return False, "No heading or metadata export found"
     if len(content) < 200:
         return False, f"Content too short ({len(content)} chars)"
+    # MDX/JSX 编译要求 void 标签自闭合，否则 next build 会失败
+    unclosed = find_unclosed_void_tag(content)
+    if unclosed:
+        return False, f"Void tag <{unclosed}> not self-closed (use <{unclosed} />)"
     return True, ""
 
 
