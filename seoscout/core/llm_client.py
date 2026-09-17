@@ -20,7 +20,12 @@ class LLMClient:
     def __init__(self):
         self.api_key = Config.LLM_API_KEY
         self.base_url = Config.LLM_API_BASE_URL.rstrip('/')
-        self.api_url = f"{self.base_url}/chat/completions"
+        self.api_style = Config.LLM_API_STYLE
+        self.api_url = (
+            f"{self.base_url}/messages"
+            if self.api_style == "anthropic"
+            else f"{self.base_url}/chat/completions"
+        )
         self.model = Config.LLM_MODEL
         self.temperature = Config.LLM_TEMPERATURE
         self.max_tokens = Config.LLM_MAX_TOKENS
@@ -28,10 +33,11 @@ class LLMClient:
         self.retry_attempts = Config.LLM_RETRY_ATTEMPTS
         self.retry_delay = Config.LLM_RETRY_DELAY
 
-        self.headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
+        self.headers = {"Content-Type": "application/json"}
+        if self.api_style == "anthropic":
+            self.headers.update({"x-api-key": self.api_key, "anthropic-version": "2023-06-01"})
+        else:
+            self.headers["Authorization"] = f"Bearer {self.api_key}"
 
         self.stats = {
             'total_requests': 0,
@@ -56,28 +62,26 @@ class LLMClient:
 
         for attempt in range(self.retry_attempts):
             try:
+                payload = {
+                    "model": self.model,
+                    "max_tokens": self.max_tokens,
+                    "temperature": self.temperature,
+                    "messages": [
+                        {"role": "system", "content": "You are a professional SEO content writer."},
+                        {"role": "user", "content": prompt},
+                    ],
+                }
+                if self.api_style == "openai":
+                    payload["stream"] = False
                 async with session.post(
-                    self.api_url,
-                    json={
-                        "model": self.model,
-                        "max_tokens": self.max_tokens,
-                        "temperature": self.temperature,
-                        "messages": [
-                            {
-                                "role": "system",
-                                "content": "You are a professional SEO content writer.",
-                            },
-                            {"role": "user", "content": prompt},
-                        ],
-                        "stream": False,
-                    },
+                    self.api_url, json=payload,
                     headers=self.headers,
                     timeout=aiohttp.ClientTimeout(total=self.timeout_seconds),
                 ) as resp:
                     if resp.status == 200:
                         data = await resp.json()
                         self._save_debug(meta or {}, data)
-                        content = data['choices'][0]['message']['content']
+                        content = self._extract_content(data)
 
                         if 'usage' in data:
                             self.stats['total_tokens'] += data['usage'].get('total_tokens', 0)
@@ -126,6 +130,15 @@ class LLMClient:
 
         self.stats['failed_requests'] += 1
         return None
+
+    def _extract_content(self, data: Dict) -> str:
+        if self.api_style == "anthropic":
+            return "".join(
+                block.get("text", "")
+                for block in data.get("content", [])
+                if block.get("type") == "text"
+            )
+        return data["choices"][0]["message"]["content"]
 
     # ── batch ───────────────────────────────────────────────────
 

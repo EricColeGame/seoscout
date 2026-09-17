@@ -75,7 +75,8 @@ class Config:
     # ============================================================
     LLM_API_KEY = ""
     LLM_API_BASE_URL = "https://api.apifast.tech/v1"
-    LLM_MODEL = "gemini-2.5-flash"
+    LLM_API_STYLE = "openai"
+    LLM_MODEL = "gemini-3.8-flash"
     LLM_TEMPERATURE = 0.7
     LLM_MAX_TOKENS = 24576
     LLM_TIMEOUT = 300
@@ -178,7 +179,10 @@ class Config:
         # LLM API (generate + translate)
         cls.LLM_API_KEY = os.getenv("LLM_API_KEY", "")
         cls.LLM_API_BASE_URL = os.getenv("LLM_API_BASE_URL", "https://api.apifast.tech/v1")
-        cls.LLM_MODEL = os.getenv("LLM_MODEL", "gemini-2.5-flash")
+        cls.LLM_API_STYLE = os.getenv("LLM_API_STYLE", "openai").lower()
+        if cls.LLM_API_STYLE not in {"openai", "anthropic"}:
+            raise ValueError("LLM_API_STYLE must be openai or anthropic")
+        cls.LLM_MODEL = os.getenv("LLM_MODEL", "gemini-3.8-flash")
         cls.LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.7"))
         cls.LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "24576"))
         cls.LLM_TIMEOUT = int(os.getenv("LLM_TIMEOUT", "300"))
