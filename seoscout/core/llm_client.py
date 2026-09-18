@@ -7,6 +7,7 @@ Shared by generate and translate stages. All config from Config class (.env).
 import asyncio
 import aiohttp
 import json
+import re
 import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -32,6 +33,7 @@ class LLMClient:
         self.timeout_seconds = Config.LLM_TIMEOUT
         self.retry_attempts = Config.LLM_RETRY_ATTEMPTS
         self.retry_delay = Config.LLM_RETRY_DELAY
+        self.max_rate_limit_wait = Config.LLM_MAX_RATE_LIMIT_WAIT
 
         self.headers = {"Content-Type": "application/json"}
         if self.api_style == "anthropic":
@@ -107,7 +109,7 @@ class LLMClient:
                         err = await resp.text()
                         print(f"  ❌ API {resp.status} for {label}: {err[:300]}")
                         if attempt < self.retry_attempts - 1:
-                            await asyncio.sleep(self.retry_delay * (attempt + 1))
+                            await asyncio.sleep(self._retry_wait(attempt, err))
                             continue
                         self.stats['failed_requests'] += 1
                         return None
@@ -130,6 +132,20 @@ class LLMClient:
 
         self.stats['failed_requests'] += 1
         return None
+
+    def _retry_wait(self, attempt: int, err: str) -> float:
+        """计算重试等待时长。
+
+        上游网关在账号池耗尽时会返回形如 "All accounts limited. Wait 295s." 的
+        503，并明确给出可重试的时间点。此时若仍按默认退避（8s、16s…）重试，
+        必然在服务端恢复前耗尽全部重试次数而失败。因此优先遵循服务端提示，
+        上限由 LLM_MAX_RATE_LIMIT_WAIT 控制，避免无限等待。
+        """
+        default_wait = self.retry_delay * (attempt + 1)
+        hint = re.search(r"[Ww]ait\s+(\d+)\s*s", err or "")
+        if not hint:
+            return default_wait
+        return max(default_wait, min(int(hint.group(1)) + 5, self.max_rate_limit_wait))
 
     def _extract_content(self, data: Dict) -> str:
         if self.api_style == "anthropic":

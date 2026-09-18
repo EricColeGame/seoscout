@@ -82,6 +82,8 @@ class Config:
     LLM_TIMEOUT = 300
     LLM_RETRY_ATTEMPTS = 2
     LLM_RETRY_DELAY = 5
+    # 服务端在 503 中提示 "Wait Ns" 时允许的最长等待（秒）
+    LLM_MAX_RATE_LIMIT_WAIT = 300
 
     # ============================================================
     # Generate concurrency
@@ -188,6 +190,7 @@ class Config:
         cls.LLM_TIMEOUT = int(os.getenv("LLM_TIMEOUT", "300"))
         cls.LLM_RETRY_ATTEMPTS = int(os.getenv("LLM_RETRY_ATTEMPTS", "2"))
         cls.LLM_RETRY_DELAY = int(os.getenv("LLM_RETRY_DELAY", "5"))
+        cls.LLM_MAX_RATE_LIMIT_WAIT = int(os.getenv("LLM_MAX_RATE_LIMIT_WAIT", "300"))
 
         # Generate concurrency
         cls.GENERATE_BATCH_SIZE = int(os.getenv("GENERATE_BATCH_SIZE", "100"))
