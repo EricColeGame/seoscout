@@ -9,6 +9,7 @@ import asyncio
 import json
 import os
 import re
+import time
 from pathlib import Path
 from string import Template
 from datetime import datetime
@@ -205,7 +206,9 @@ async def run_translate(
 
     # Execute in batches
     client = LLMClient()
-    client.stats['start_time'] = asyncio.get_event_loop().time() if hasattr(asyncio, 'get_event_loop') else __import__('time').time()
+    # 必须与 llm_client.print_stats 使用的 time.time() 同源；
+    # 事件循环时钟是 monotonic（约等于开机秒数），与之相减会得出天文数字耗时。
+    client.stats['start_time'] = time.time()
 
     batch_size = Config.TRANSLATE_BATCH_SIZE
     batch_delay = Config.TRANSLATE_BATCH_DELAY
