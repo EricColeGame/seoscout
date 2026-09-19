@@ -250,6 +250,7 @@ async def run_search(project: str, keywords_file: str):
     pending = {
         "version": "2.0",
         "created_at": datetime.now().isoformat(),
+        "topic_name": topic_name,
         "keywords": keyword_data
     }
 

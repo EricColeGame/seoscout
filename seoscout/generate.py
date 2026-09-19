@@ -48,6 +48,19 @@ def load_prompt_template(prompt_path: str = None) -> str:
         return f.read()
 
 
+def load_topic_name(keywords_file: str) -> str:
+    """读取关键词文件里的 topic_name（站点主题），读不到时返回空串。
+
+    生成阶段需要知道站点主题，才能在参考素材被同名词条污染时（如
+    "slime out fish" 同时是水族药剂和游戏名）拒绝照着跑题素材写作。
+    """
+    try:
+        with open(keywords_file, 'r', encoding='utf-8') as f:
+            return (json.load(f).get('topic_name') or '').strip()
+    except (OSError, ValueError):
+        return ""
+
+
 def clean_llm_output(content: str) -> str:
     """Strip code fences, trim, and self-close MDX void tags (<br> -> <br />)."""
     content = content.strip()
@@ -102,6 +115,10 @@ async def run_generate(
     # Load prompt template
     prompt_template = load_prompt_template(prompt_path)
     print(f"  📝 Prompt template loaded ({len(prompt_template)} chars)\n")
+
+    topic_name = load_topic_name(keywords_file)
+    if topic_name:
+        print(f"  🏷️  Topic: {topic_name}\n")
 
     # Load keywords with categories from search_results.json
     search_results_path = f"{Config.OUT_DIR}/search_results.json"
@@ -188,6 +205,7 @@ async def run_generate(
             merged_data=merged_json,
             current_date=current_date,
             category=cat_slug_final,
+            topic_name=topic_name,
         )
 
         prompts.append((prompt, {'keyword': keyword, 'slug': slug, 'output_path': output_path}))

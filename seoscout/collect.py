@@ -17,11 +17,78 @@ from .core.config import Config
 from .core.youtube import YouTube
 from .core.web import Web
 from .core.models import YouTubeItem, WebItem
-from .core.utils import load_json, save_json, ensure_dir
+from .core.utils import load_json, save_json, ensure_dir, is_topic_match
 
 
 def keyword_to_filename(keyword: str) -> str:
     return re.sub(r'[^a-z0-9_]', '', keyword.lower().replace(' ', '_').replace('/', '_'))
+
+
+def _item_matches_topic(item: dict, topic_name: str) -> bool:
+    return is_topic_match(
+        f"{item.get('title', '')} {item.get('snippet', '')} {item.get('url', '')}",
+        topic_name,
+    )
+
+
+def select_topic_web_items(web_items_by_keyword, topic_name, top_k, pool_cap=10):
+    """按主题相关性挑选每个关键词的 Web 参考素材。
+
+    关键词常与同名的其它事物撞车（如 "slime out fish" 同时是水族药剂
+    "Fritz Slime Out" 和 Roblox 游戏名），Serper 的头部结果可能整片跑题。
+    若照单全收，生成阶段只能照着跑题素材写作，产出与站点主题无关的文章。
+
+    策略：
+    1. 优先保留命中主题名的结果；
+    2. 命中不足时，用「主题相关页面池」（所有关键词中命中主题的页面去重集合）
+       补足——主题自身的页面（官网/商店页等）对同主题下的每个关键词都是有效背景；
+    3. 若全站都没有命中主题的页面，退回原有行为（保留全部结果），避免丢词。
+
+    Args:
+        web_items_by_keyword: {keyword: [WebItem dict, ...]}
+        topic_name: 主题名（为空时不做任何筛选）
+        top_k: 每个关键词保留的素材数上限
+        pool_cap: 主题相关页面池的大小上限
+
+    Returns:
+        (selected_by_keyword, stats)
+    """
+    if not topic_name:
+        return ({k: v[:top_k] for k, v in web_items_by_keyword.items()},
+                {"pool": 0, "offtopic_dropped": 0, "fallback": False})
+
+    pool, pool_urls = [], set()
+    for items in web_items_by_keyword.values():
+        for item in items:
+            url = item.get("url")
+            if url and url not in pool_urls and _item_matches_topic(item, topic_name):
+                pool_urls.add(url)
+                pool.append(item)
+                if len(pool) >= pool_cap:
+                    break
+        if len(pool) >= pool_cap:
+            break
+
+    if not pool:
+        return ({k: v[:top_k] for k, v in web_items_by_keyword.items()},
+                {"pool": 0, "offtopic_dropped": 0, "fallback": True})
+
+    selected = {}
+    off_topic_dropped = 0
+    for keyword, items in web_items_by_keyword.items():
+        own = [item for item in items if _item_matches_topic(item, topic_name)]
+        chosen = list(own)
+        seen = {item.get("url") for item in chosen}
+        for item in pool:
+            if len(chosen) >= top_k:
+                break
+            if item.get("url") not in seen:
+                chosen.append(item)
+                seen.add(item.get("url"))
+        off_topic_dropped += max(0, len(items) - len(own))
+        selected[keyword] = chosen[:top_k]
+
+    return selected, {"pool": len(pool), "offtopic_dropped": off_topic_dropped, "fallback": False}
 
 
 def deduplicate_items(items_by_keyword, item_type="video"):
@@ -103,12 +170,29 @@ async def run_collect(project: str):
                 item_dict for item_dict in kw_data["web"]["items"]
                 if item_dict.get("selected", True)
             ]
-            web_items_by_keyword[keyword] = selected_web[:Config.WEB_EXTRACT_TOP_K]
+            web_items_by_keyword[keyword] = selected_web
         else:
             web_items_by_keyword[keyword] = []
 
     if skipped_count > 0:
         print(f"\n⏭️  Skipped {skipped_count} keywords (collected file exists)")
+
+    # 按主题相关性筛选 Web 素材（详见 select_topic_web_items）
+    topic_name = data.get("topic_name", "")
+    if topic_name:
+        web_items_by_keyword, topic_stats = select_topic_web_items(
+            web_items_by_keyword, topic_name, Config.WEB_EXTRACT_TOP_K
+        )
+        print(f"\n🏷️  主题筛选: \"{topic_name}\"")
+        if topic_stats["fallback"]:
+            print("  ⚠️  全站无命中主题的页面，退回保留全部 Web 结果（避免丢词）")
+        else:
+            print(f"  - 主题相关页面池: {topic_stats['pool']} 个")
+            print(f"  - 已剔除跑题结果: {topic_stats['offtopic_dropped']} 条")
+    else:
+        web_items_by_keyword = {
+            k: v[:Config.WEB_EXTRACT_TOP_K] for k, v in web_items_by_keyword.items()
+        }
 
     print("\n📋 Before dedup:")
     total_yt_before = sum(len(items) for items in yt_items_by_keyword.values())

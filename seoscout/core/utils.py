@@ -6,6 +6,7 @@
 
 import os
 import json
+import re
 import time
 from typing import List, Dict, Any
 from urllib.parse import urlparse
@@ -79,6 +80,38 @@ def is_blocked_domain(url: str, blocked_domains: set) -> bool:
     """
     domain = extract_domain(url)
     return any(blocked in domain for blocked in blocked_domains)
+
+
+def is_topic_match(text: str, topic_name: str) -> bool:
+    """
+    判断文本是否命中主题名（用于把主题相关的结果排在前面）。
+
+    按“整词 + 顺序相邻”匹配主题短语，词间容忍分隔符差异，因此
+    "Slime Out Fish - Roblox" 与 ".../Slime-Out-Fish" 都算命中。
+
+    刻意不做「去掉所有分隔符后的子串包含」匹配：那会把
+    "FritzSlimeOutFishTreatment" 这类相邻拼接也判为命中，放大误报。
+
+    注意：本函数只做词面匹配，无法区分同名词条的语义。例如产品标题
+    "Fritz Slime Out fish treatment" 字面上就包含 "Slime Out fish"，仍会命中；
+    该歧义由生成阶段的主题约束（templates/generate.md）兜底，而不是靠这里。
+
+    Args:
+        text: 待检查文本（标题 / 摘要 / URL）
+        topic_name: 主题名
+
+    Returns:
+        是否命中
+    """
+    if not text or not topic_name:
+        return False
+
+    words = [re.escape(word) for word in topic_name.lower().split()]
+    if not words:
+        return False
+
+    pattern = r'\b' + r'[\s\-_.]*'.join(words) + r'\b'
+    return re.search(pattern, text.lower()) is not None
 
 
 def load_keywords_from_json(json_file: str) -> List[Dict]:

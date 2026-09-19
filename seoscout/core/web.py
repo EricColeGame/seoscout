@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 
 from .config import Config
 from .models import WebItem
-from .utils import is_blocked_domain, load_cache, save_cache, get_url_hash
+from .utils import is_blocked_domain, is_topic_match, load_cache, save_cache, get_url_hash
 from .cleaner import ContentCleaner
 
 
@@ -134,8 +134,19 @@ class Web:
                     if not is_blocked_domain(r.get('link', ''), self.config.BLOCKED_DOMAINS)
                 ]
 
-                # Web results are NOT filtered by topic_name
-                # (only YouTube results are topic-filtered)
+                # 主题相关性优先排序（稳定排序，不丢弃任何结果）：
+                # 关键词常与同名的其它事物撞车（如 "slime out fish" 同时是水族药剂
+                # "Fritz Slime Out" 和 Roblox 游戏名），Serper 返回的头部结果可能整片
+                # 跑题。而 WEB_EXTRACT_TOP_K 只取前 K 条，若跑题结果占据头部，真正相关
+                # 的页面（如 roblox.com/games/...）会被直接丢掉，生成阶段只能照着跑题
+                # 素材写。这里把命中主题名的结果提到前面，无命中时保持原有顺序。
+                if topic_name:
+                    filtered.sort(
+                        key=lambda r: not is_topic_match(
+                            f"{r.get('title', '')} {r.get('snippet', '')} {r.get('link', '')}",
+                            topic_name,
+                        )
+                    )
 
                 # 转换为 WebItem
                 items = []
