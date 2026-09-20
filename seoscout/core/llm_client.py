@@ -22,6 +22,8 @@ class LLMClient:
         self.api_key = Config.LLM_API_KEY
         self.base_url = Config.LLM_API_BASE_URL.rstrip('/')
         self.api_style = Config.LLM_API_STYLE
+        if self.api_style != "anthropic" and not self.base_url.endswith("/v1"):
+            self.base_url = f"{self.base_url}/v1"
         self.api_url = (
             f"{self.base_url}/messages"
             if self.api_style == "anthropic"
