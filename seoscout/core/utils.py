@@ -262,10 +262,16 @@ def normalize_mdx_void_tags(content: str) -> str:
     parts = re.split(r"(^```.*?^```)", content, flags=re.DOTALL | re.MULTILINE)
 
     def _fix_void_tags(segment: str) -> str:
-        return _VOID_TAG_RE.sub(
+        fixed = _VOID_TAG_RE.sub(
             lambda match: f"<{match.group(1)}{match.group(2).rstrip()} />",
             segment,
         )
+        # 转义非行内代码正文中的 `<数字` 比较符（如 `<5` -> `&lt;5`），防止 MDX JSX 报错
+        inline_parts = re.split(r"(`[^`\n]*`)", fixed)
+        for i in range(len(inline_parts)):
+            if not inline_parts[i].startswith("`"):
+                inline_parts[i] = re.sub(r"<(?=[0-9])", "&lt;", inline_parts[i])
+        return "".join(inline_parts)
 
     return "".join(
         part if part.startswith("```") else _fix_void_tags(part)

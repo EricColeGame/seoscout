@@ -115,7 +115,7 @@ async def run_translate(
     print("=" * 70)
 
     # Parse languages (any code accepted, name resolved from map or title-cased)
-    target_langs = [l.strip() for l in lang.split(',') if l.strip()]
+    target_langs = [l.strip() for l in lang.split(',') if l.strip() and l.strip() != 'en']
     if not target_langs:
         print("  ❌ No target languages specified")
         return

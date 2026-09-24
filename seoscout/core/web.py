@@ -52,6 +52,8 @@ class TokenBucket:
 class Web:
     """Web 搜索和提取（支持并行）"""
 
+    _serper_disabled = False
+
     def __init__(self):
         self.config = Config
         self.cleaner = ContentCleaner()  # 初始化内容清理器
@@ -106,27 +108,53 @@ class Web:
             await asyncio.sleep(0.3)
 
             try:
-                # 调用 Serper API
-                url = "https://google.serper.dev/search"
-                headers = {
-                    "X-API-KEY": self.config.SERPER_API_KEY,
-                    "Content-Type": "application/json"
-                }
-                payload = {
-                    "q": keyword,
-                    "num": self.config.WEB_SEARCH_TOP_N
-                }
+                results = []
+                # 尝试 Serper API
+                if not Web._serper_disabled and self.config.SERPER_API_KEY and len(self.config.SERPER_API_KEY.strip()) > 0:
+                    try:
+                        url = "https://google.serper.dev/search"
+                        headers = {
+                            "X-API-KEY": self.config.SERPER_API_KEY,
+                            "Content-Type": "application/json"
+                        }
+                        payload = {
+                            "q": keyword,
+                            "num": self.config.WEB_SEARCH_TOP_N
+                        }
+                        proxy_url = self.config.get_proxy_url_for_stage("search")
+                        async with aiohttp.ClientSession() as session:
+                            async with session.post(url, json=payload, headers=headers, timeout=15, proxy=proxy_url) as response:
+                                if response.status == 200:
+                                    data = await response.json()
+                                    results = data.get("organic", [])
+                                else:
+                                    err_body = await response.text()
+                                    if response.status == 400 or "credit" in err_body.lower():
+                                        Web._serper_disabled = True
+                                        print(f"  ⚠️ Serper 额度耗尽，自动切换为 Jina Search: {err_body[:80]}")
+                    except Exception as e:
+                        print(f"  ⚠️ Serper API 错误: {e}")
 
-                # 获取搜索阶段代理配置
-                proxy_url = self.config.get_proxy_url_for_stage("search")
-
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(url, json=payload, headers=headers, timeout=30, proxy=proxy_url) as response:
-                        if response.status != 200:
-                            raise Exception(f"Serper API 返回错误: {response.status}")
-
-                        data = await response.json()
-                        results = data.get("organic", [])
+                # 若 Serper 无结果或不可用，降级使用 Jina Search
+                if not results and self.config.JINA_API_KEY:
+                    try:
+                        jina_url = f"https://s.jina.ai/{keyword}"
+                        headers = {
+                            "Authorization": f"Bearer {self.config.JINA_API_KEY}",
+                            "Accept": "application/json"
+                        }
+                        async with aiohttp.ClientSession() as session:
+                            async with session.get(jina_url, headers=headers, timeout=25) as response:
+                                if response.status == 200:
+                                    data = await response.json()
+                                    for entry in data.get("data", []):
+                                        results.append({
+                                            "title": entry.get("title", ""),
+                                            "link": entry.get("url", ""),
+                                            "snippet": entry.get("description", "")
+                                        })
+                    except Exception as e:
+                        print(f"  ⚠️ Jina search 降级异常: {e}")
 
                 # 过滤屏蔽域名
                 filtered = [
