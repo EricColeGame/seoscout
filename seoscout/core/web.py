@@ -6,9 +6,12 @@ Web 搜索和提取模块
 
 import asyncio
 import aiohttp
+import base64
+import re
 import time
+from html.parser import HTMLParser
 from typing import List, Dict, Tuple
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from .config import Config
 from .models import WebItem
@@ -49,10 +52,87 @@ class TokenBucket:
         self.last_update = now
 
 
+class BingResultParser(HTMLParser):
+    """解析 Bing 搜索结果页（`<li class="b_algo">`），提取标题 / 链接 / 摘要。
+
+    Bing 把真实链接包在 `https://www.bing.com/ck/a?...&u=a1<base64url>` 里，
+    因此链接需要经 decode_bing_url 还原后再用。
+    """
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.results = []
+        self._li_depth = 0
+        self._current = None
+        self._h2_depth = 0
+        self._in_title = False
+        self._in_snippet = False
+        self._buf = []
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        classes = (attrs.get('class') or '').split()
+        if tag == 'li' and 'b_algo' in classes:
+            self._li_depth = 1
+            self._current = {'title': '', 'link': '', 'snippet': ''}
+            return
+        if not self._li_depth:
+            return
+        if tag == 'li':
+            self._li_depth += 1
+        elif tag == 'h2':
+            self._h2_depth += 1
+        elif tag == 'a' and self._h2_depth and not self._current['link']:
+            self._current['link'] = attrs.get('href', '')
+            self._in_title = True
+            self._buf = []
+        elif tag == 'p' and not self._current['snippet']:
+            self._in_snippet = True
+            self._buf = []
+
+    def handle_endtag(self, tag):
+        if not self._li_depth:
+            return
+        if tag == 'a' and self._in_title:
+            self._current['title'] = re.sub(r'\s+', ' ', ''.join(self._buf)).strip()
+            self._in_title = False
+        elif tag == 'h2':
+            self._h2_depth = max(0, self._h2_depth - 1)
+        elif tag == 'p' and self._in_snippet:
+            self._current['snippet'] = re.sub(r'\s+', ' ', ''.join(self._buf)).strip()
+            self._in_snippet = False
+        elif tag == 'li':
+            self._li_depth -= 1
+            if self._li_depth == 0:
+                if self._current['link'] and self._current['title']:
+                    self.results.append(self._current)
+                self._current = None
+
+    def handle_data(self, data):
+        if self._in_title or self._in_snippet:
+            self._buf.append(data)
+
+
+def decode_bing_url(url: str) -> str:
+    """还原 Bing 跳转链接，非跳转链接原样返回。"""
+    if 'bing.com/ck/a' not in url:
+        return url
+    value = parse_qs(urlparse(url.replace('&amp;', '&')).query).get('u', [''])[0]
+    if value.startswith('a1'):
+        raw = value[2:]
+        raw += '=' * (-len(raw) % 4)
+        try:
+            return base64.urlsafe_b64decode(raw).decode('utf-8', 'replace')
+        except Exception:
+            return url
+    return url
+
+
 class Web:
     """Web 搜索和提取（支持并行）"""
 
     _serper_disabled = False
+    _bing_disabled = False
 
     def __init__(self):
         self.config = Config
@@ -156,6 +236,10 @@ class Web:
                     except Exception as e:
                         print(f"  ⚠️ Jina search 降级异常: {e}")
 
+                # 若仍无结果（Serper 额度耗尽且 Jina 不可用/无余额），降级使用 Bing
+                if not results and not Web._bing_disabled:
+                    results = await self._bing_search(keyword)
+
                 # 过滤屏蔽域名
                 filtered = [
                     r for r in results
@@ -192,6 +276,49 @@ class Web:
 
             except Exception as e:
                 raise Exception(f"搜索失败: {e}")
+
+    async def _bing_search(self, keyword: str) -> List[Dict]:
+        """Bing HTML 搜索兜底（无需 API key）。
+
+        Serper 额度耗尽、Jina 无余额时的最后一级降级：直接抓取 Bing 搜索结果页
+        的 `b_algo` 列表，解析出标题 / 真实链接 / 摘要，输出结构与 Serper 的
+        organic 结果保持一致（title / link / snippet）。
+        """
+        query = keyword.replace(' ', '+')
+        url = f"https://www.bing.com/search?q={query}&count={self.config.WEB_SEARCH_TOP_N}"
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            ),
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+        for attempt in range(2):
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(url, headers=headers, timeout=20) as response:
+                        if response.status != 200:
+                            raise Exception(f"HTTP {response.status}")
+                        html = await response.text()
+                parser = BingResultParser()
+                parser.feed(html)
+                parsed = [
+                    {
+                        "title": entry["title"],
+                        "link": decode_bing_url(entry["link"]),
+                        "snippet": entry["snippet"],
+                    }
+                    for entry in parser.results
+                ]
+                if parsed:
+                    return parsed
+                raise Exception("页面未解析出结果")
+            except Exception as e:
+                if attempt == 1:
+                    print(f"  ⚠️ Bing search 降级失败: {e}")
+                    return []
+                await asyncio.sleep(2 ** attempt)
+        return []
 
     def _log_filtered(self, topic_name: str, items: list, source: str = "web"):
         """记录被过滤掉的条目到日志文件，便于后期审查"""
