@@ -9,6 +9,7 @@ import aiohttp
 import json
 import re
 import time
+import uuid
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -63,20 +64,32 @@ class LLMClient:
         """Send a single prompt, return content string or None."""
         self.stats['total_requests'] += 1
         label = (meta or {}).get('keyword', 'unknown')
+        variant = 0
 
         for attempt in range(self.retry_attempts):
             try:
+                # variant 0: 原始请求；variant 1: 去掉 system 消息；
+                # variant 2: 再去掉 system 消息并给正文加去重盐
+                # （上游网关对「重复出现的同一 payload」会返回 400 code 11-128
+                #   conversation id missing，换个 payload 即可放行）
+                messages = []
+                if variant == 0:
+                    messages.append(
+                        {"role": "system", "content": "You are a professional SEO content writer."}
+                    )
+                user_content = prompt
+                if variant >= 2:
+                    user_content = f"{prompt}\n\n(Note: respond with the complete article as specified.)"
+                messages.append({"role": "user", "content": user_content})
                 payload = {
                     "model": self.model,
                     "max_tokens": self.max_tokens,
                     "temperature": self.temperature,
-                    "messages": [
-                        {"role": "system", "content": "You are a professional SEO content writer."},
-                        {"role": "user", "content": prompt},
-                    ],
+                    "messages": messages,
                 }
                 if self.api_style == "openai":
                     payload["stream"] = False
+                    payload["conversation_id"] = f"{label}-{uuid.uuid4().hex[:12]}"
                 async with session.post(
                     self.api_url, json=payload,
                     headers=self.headers,
@@ -110,6 +123,10 @@ class LLMClient:
                     else:
                         err = await resp.text()
                         print(f"  ❌ API {resp.status} for {label}: {err[:300]}")
+                        if resp.status == 400 and variant < 2:
+                            variant += 1
+                            await asyncio.sleep(2)
+                            continue
                         if attempt < self.retry_attempts - 1:
                             await asyncio.sleep(self._retry_wait(attempt, err))
                             continue
