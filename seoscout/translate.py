@@ -24,6 +24,7 @@ from .core.utils import ensure_dir, find_unclosed_void_tag, normalize_mdx_void_t
 LANG_NAMES = {
     'es': 'Spanish',
     'pt': 'Portuguese (Brazil)',
+    'pt-br': 'Portuguese (Brazil)',
     'de': 'German',
     'fr': 'French',
     'ja': 'Japanese',
