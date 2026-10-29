@@ -12,12 +12,23 @@ import os
 import re
 from datetime import datetime
 from collections import defaultdict
+from urllib.parse import urlparse
 
 from .core.config import Config
 from .core.youtube import YouTube
 from .core.web import Web
 from .core.models import YouTubeItem, WebItem
 from .core.utils import load_json, save_json, ensure_dir, is_topic_match
+
+
+def is_steam_storefront_fallback(url: str, content: str) -> bool:
+    """Reject a redirected Steam homepage saved under a product URL."""
+    parsed = urlparse(url)
+    return (
+        parsed.hostname == "store.steampowered.com"
+        and bool(re.match(r"^/app/[0-9]+(?:/|$)", parsed.path))
+        and bool(re.search(r"^Title:\s*(?:Steam Store|Welcome to Steam)\s*$", content, re.MULTILINE | re.IGNORECASE))
+    )
 
 
 def keyword_to_filename(keyword: str) -> str:
@@ -247,6 +258,9 @@ async def run_collect(project: str):
                 })
 
     for item, content in web_results:
+        if content and is_steam_storefront_fallback(item.url, content):
+            print(f"  ⚠️ Rejected Steam homepage returned for product URL: {item.url}")
+            continue
         if content:
             url = item.url
             keywords = web_url_to_keywords.get(url, [])
@@ -276,14 +290,18 @@ async def run_collect(project: str):
         # 兜底机制：若 Jina/YouTube 提取均未成功，从 search_results 的 web snippet 补足，避免因单一外链抓取失败而丢词
         if not keyword_result["youtube"] and not keyword_result["web"]:
             if "web" in kw_data and kw_data["web"].get("items"):
-                for item_dict in kw_data["web"]["items"]:
+                # Reuse only the selected, topic-filtered pool; never restore
+                # unrelated or explicitly deselected results during fallback.
+                for item_dict in web_items_by_keyword.get(keyword, []):
                     snip = item_dict.get("snippet", "")
                     if snip:
                         keyword_result["web"].append({
                             "type": "web",
                             "title": item_dict.get("title", ""),
                             "url": item_dict.get("url", ""),
-                            "content": snip
+                            "content": snip,
+                            "content_kind": "search_snippet",
+                            "extraction_status": "unavailable"
                         })
             if not keyword_result["youtube"] and not keyword_result["web"]:
                 continue
