@@ -28,6 +28,7 @@ class LLMClient:
         self.api_url = (
             f"{self.base_url}/messages"
             if self.api_style == "anthropic"
+            else f"{self.base_url}/responses" if self.api_style == "responses"
             else f"{self.base_url}/chat/completions"
         )
         self.model = Config.LLM_MODEL
@@ -87,6 +88,9 @@ class LLMClient:
                     "temperature": self.temperature,
                     "messages": messages,
                 }
+                if self.api_style == "responses":
+                    payload = {"model": self.model, "input": messages,
+                               "max_output_tokens": self.max_tokens, "stream": False}
                 if self.api_style == "openai":
                     payload["stream"] = False
                     payload["conversation_id"] = f"{label}-{uuid.uuid4().hex[:12]}"
@@ -172,6 +176,14 @@ class LLMClient:
                 block.get("text", "")
                 for block in data.get("content", [])
                 if block.get("type") == "text"
+            )
+        if self.api_style == "responses":
+            if data.get("status") not in (None, "completed"):
+                raise ValueError("Responses generation did not complete")
+            return data.get("output_text") or "".join(
+                block.get("text", "")
+                for item in data.get("output", []) if item.get("type") == "message"
+                for block in item.get("content", []) if block.get("type") == "output_text"
             )
         return data["choices"][0]["message"]["content"]
 
