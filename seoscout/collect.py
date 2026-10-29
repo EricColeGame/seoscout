@@ -140,6 +140,7 @@ async def run_collect(project: str):
 
     collected_dir = f"{Config.OUT_DIR}/collected"
     skipped_count = 0
+    pending_keywords = set()
 
     for kw_data in data["keywords"]:
         keyword = kw_data["keyword"]
@@ -155,6 +156,7 @@ async def run_collect(project: str):
         if os.path.exists(collected_path):
             skipped_count += 1
             continue
+        pending_keywords.add(keyword)
 
         if "youtube" in kw_data and kw_data["youtube"].get("items"):
             selected_yt = [
@@ -265,6 +267,9 @@ async def run_collect(project: str):
     total_saved = 0
     for kw_data in data["keywords"]:
         keyword = kw_data["keyword"]
+        # Partial resume must never rewrite material skipped during collection.
+        if keyword not in pending_keywords:
+            continue
         category = kw_data.get("category", "")
         keyword_result = results.get(keyword, {"youtube": [], "web": []})
 
