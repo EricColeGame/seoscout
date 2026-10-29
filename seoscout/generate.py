@@ -66,6 +66,8 @@ def clean_llm_output(content: str) -> str:
     content = content.strip()
     if content.startswith('```markdown'):
         content = content[len('```markdown'):].lstrip('\n')
+    elif content.startswith('```mdx'):
+        content = content[len('```mdx'):].lstrip('\n')
     elif content.startswith('```md'):
         content = content[len('```md'):].lstrip('\n')
     elif content.startswith('```'):
