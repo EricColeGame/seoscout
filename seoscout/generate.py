@@ -12,6 +12,7 @@ import os
 import re
 from datetime import datetime
 from pathlib import Path
+from string import Formatter
 
 from .core.config import Config
 from .core.llm_client import LLMClient
@@ -38,14 +39,13 @@ def keyword_to_filename(keyword: str) -> str:
 
 def load_prompt_template(prompt_path: str = None) -> str:
     """Load prompt template from file or use built-in default."""
-    if prompt_path:
-        with open(prompt_path, 'r', encoding='utf-8') as f:
-            return f.read()
-
-    # Built-in default
-    default = Path(__file__).parent / "templates" / "generate.md"
-    with open(default, 'r', encoding='utf-8') as f:
-        return f.read()
+    path = Path(prompt_path) if prompt_path else Path(__file__).parent / "templates" / "generate.md"
+    with open(path, 'r', encoding='utf-8') as f:
+        template = f.read()
+    fields = {field for _, field, _, _ in Formatter().parse(template) if field is not None}
+    if "merged_data" not in fields:
+        raise ValueError("Generation prompt must include a {merged_data} field for per-article source material")
+    return template
 
 
 def load_topic_name(keywords_file: str) -> str:
